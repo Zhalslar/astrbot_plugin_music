@@ -1,0 +1,8 @@
+{
+    "white_list_groups": {
+        "description": "群聊白名单",
+        "type": "list",
+        "hint": "只有在白名单的群聊才启用点赞功能, 若没填写则默认全部群聊可用",
+        "default": []
+    }
+}
