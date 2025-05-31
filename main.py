@@ -55,10 +55,10 @@ class MusicPlugin(Star):
         self.send_mode = config.get("send_mode", "card")
 
         # 是否启用评论
-        self.enable_comments = True
+        self.enable_comments = config.get("enable_comments", True)
 
         # 是否启用歌词
-        self.enable_lyrics = True
+        self.enable_lyrics = config.get("enable_lyrics", False)
 
         # 等待超时时长
         self.timeout = config.get("timeout", 30)
