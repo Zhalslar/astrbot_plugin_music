@@ -1,8 +1,53 @@
 {
-    "white_list_groups": {
-        "description": "群聊白名单",
-        "type": "list",
-        "hint": "只有在白名单的群聊才启用点赞功能, 若没填写则默认全部群聊可用",
-        "default": []
+    "default_api":{
+        "description": "默认音源",
+        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗，暂时仅支持网易云音乐",
+        "type": "string",
+        "options": [
+            "netease",
+            "qqmusic",
+            "kugou"
+        ],
+        "default": "netease"
+    },
+    "select_mode":{
+        "description": "选择模式",
+        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、图片模式(image,暂时没做好)、按钮模式(button)。注意按钮模式需要安装前置插件astrbot_plugin_buttons, 不满足时自动采用可用方式展示搜索结果",
+        "type": "string",
+        "default": "text",
+        "options": [
+            "text",
+            "image",
+            "button"
+        ]
+    },
+    "send_mode": {
+        "description": "发送模式",
+        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文本模式(text), 注意卡片模式仅支持aiocqhttp消息平台, 不满足时自动采用可用方式发送歌曲",
+        "type": "string",
+        "default": "card",
+        "options": [
+            "text",
+            "record",
+            "card"
+        ]
+    },
+    "enable_comments":  {
+        "description": "是否启用评论",
+        "hint": "开启后在发送歌曲后附加一条评论",
+        "type": "bool",
+        "default": true
+    },
+    "enable_lyrics": {
+        "description": "是否启用歌词",
+        "hint": "开启后在发送歌曲后附加一张歌曲图片",
+        "type": "bool",
+        "default": false
+    },
+    "timeout": {
+        "description": "点歌操作的超时时长（秒）",
+        "hint": "点歌时用户在此时间内没有进行操作则自动取消点歌",
+        "type": "int",
+        "default": 30
     }
 }

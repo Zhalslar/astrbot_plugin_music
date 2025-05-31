@@ -3,7 +3,6 @@
 
 ![:name](https://count.getloli.com/@astrbot_plugin_music?name=astrbot_plugin_music&theme=minecraft&padding=6&offset=0&align=top&scale=1&pixelated=1&darkmode=auto)
 
-
 # astrbot_plugin_music
 
 _✨ [astrbot](https://github.com/AstrBotDevs/AstrBot) 点歌插件 ✨_  
@@ -41,8 +40,17 @@ git clone https://github.com/Zhalslar/astrbot_plugin_music
 
 |     命令      |      说明       |
 |:-------------:|:-----------------------------:|
-| /点歌 歌名      | 根据序号点歌  |
-| /点歌 歌名-歌手  | 直接发送搜到的第一首歌，歌名歌手用短杠隔开  |
+| /点歌 歌名      | 根据序号点歌,可以附加歌手名  |
+
+# TODO
+
+- [ ] 支持多源：网易云音乐、QQ音乐、酷狗音乐...
+- [x] 兼容多平台：QQ、Telegram、微信...
+- [x] 附加一条热评
+- [ ] 支持收藏夹，建立歌单
+- [x] QQ平台支持按钮点歌
+- [ ] 支持llm智能推送、llm评价
+- [ ] 支持自动推送下一首
 
 ## 👥 贡献指南
 
