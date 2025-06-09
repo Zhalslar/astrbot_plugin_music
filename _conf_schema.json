@@ -1,14 +1,22 @@
 {
     "default_api":{
         "description": "默认音源",
-        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗，暂时仅支持网易云音乐",
+        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗; netease_nodejs 网易云音乐nodejs版本 ，暂时仅支持网易云音乐",
         "type": "string",
         "options": [
             "netease",
             "qqmusic",
-            "kugou"
+            "kugou",
+            "netease_nodejs"
         ],
         "default": "netease"
+    },
+
+    "nodejs_base_url":{
+        "description": "nodejs服务的api根地址",
+        "hint": "如果启用nodejs模块，则需要配置此项",
+        "type": "string",
+        "default": "http://netease_cloud_music_api:3000"
     },
     "select_mode":{
         "description": "选择模式",
