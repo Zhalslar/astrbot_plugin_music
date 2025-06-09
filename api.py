@@ -88,8 +88,79 @@ class NetEaseMusicAPI:
             "cover_url": result.get("cover"),
             "audio_url": result.get("music_url"),
         }
+class NetEaseMusicAPINodeJs:
+    """
+    网易云音乐API NodeJs版本
+    """
+    def __init__(self, base_url:str):
+        # http://netease_cloud_music_api:{port}/
+        self.base_url = base_url
+        pass
+    async def _request(
+        self,
+        url: str,
+        data: dict = {},
+        method: str = "GET",
+    ):
+        """统一请求接口"""
+        async with aiohttp.ClientSession() as session:
+            if method.upper() == "POST":
+                async with session.post(
+                    url,  data=data
+                ) as response:
+                    if response.headers.get("Content-Type") == "application/json":
+                        return await response.json()
+                    else:
+                        return json.loads(await response.text())
 
+            elif method.upper() == "GET":
+                async with session.get(
+                    url
+                ) as response:
+                    return await response.json()
+            else:
+                raise ValueError("不支持的请求方式")
 
+    async def fetch_data(self, keyword: str, limit=5) -> list[dict]:
+        """搜索歌曲"""
+        url = f"{self.base_url}/search"
+        data = {"keywords": keyword, "limit": limit, "type": 1, "offset": 0}
+        result = await self._request(url, data=data, method="POST")
+        
+        return [
+            {
+                "id": song["id"],
+                "name": song["name"],
+                "artists": "、".join(artist["name"] for artist in song["artists"]),
+                "duration": song["duration"],
+            }
+            for song in result["result"]["songs"][:limit]
+        ]
+
+    async def fetch_comments(self, song_id: int):
+        """获取热评"""
+        url = f"{self.base_url}/comment/hot"
+        data = {
+            "id": song_id,
+            "type": 0,
+        }
+        result = await self._request(url, data=data, method="POST")
+        return result.get("hotComments", [])
+
+    async def fetch_lyrics(self, song_id):
+        """获取歌词"""
+        url = f"{self.base_url}/lyric?id={song_id}"
+        result = await self._request(url)
+        return result.get("lrc", {}).get("lyric", "歌词未找到")
+    async def fetch_extra(self, song_id: str | int) -> dict[str, str]:
+        """
+        获取额外信息
+        """
+        url = f"{self.base_url}/song/url?id={song_id}"
+        result = await self._request(url)
+        return {
+            "audio_url": result["data"][0].get("url", "")
+        }
 class MusicSearcher:
     """
     用于从指定音乐平台搜索歌曲信息的工具类。

@@ -37,10 +37,19 @@ class MusicPlugin(Star):
 
         # 默认API
         self.default_api = config.get("default_api", "netease")
+        # 是否使用 网易云nodejs服务
+        self.enable_nodejs = config.get("enable_nodejs", False)
+        # 网易云nodejs服务的默认端口
+        self.nodejs_base_url = config.get("nodejs_base_url", 3000)
         if self.default_api == "netease":
-            from .api import NetEaseMusicAPI
+            if not self.enable_nodejs:
+                from .api import NetEaseMusicAPI
 
-            self.api = NetEaseMusicAPI()
+                self.api = NetEaseMusicAPI()
+            elif self.enable_nodejs:
+                from .api import NetEaseMusicAPINodeJs
+
+                self.api = NetEaseMusicAPINodeJs(root=self.nodejs_base_url)
         # elif self.default_api == "tencent":
         #     from .api import TencentMusicAPI
         #     self.api = TencentMusicAPI()

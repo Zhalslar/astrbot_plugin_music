@@ -10,6 +10,25 @@
         ],
         "default": "netease"
     },
+    "nodejs": {
+        "description": "网易云nodejs模块",
+        "hint": "此配置决定是否使用 网易云nodejs模块、服务的api根地址",
+        "type": "object",
+        "items": {
+            "enable_nodejs":{
+                "description": "是否启用nodejs模块",
+                "hint": "开启后将使用nodejs模块进行歌曲搜索和发送",
+                "type": "bool",
+                "default": false
+            },
+            "nodejs_base_url":{
+                "description": "nodejs服务的api根地址",
+                "hint": "如果启用nodejs模块，则需要配置此项",
+                "type": "string",
+                "default": "http://netease_cloud_music_api:3000"
+            }
+        }
+    },
     "select_mode":{
         "description": "选择模式",
         "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、图片模式(image,暂时没做好)、按钮模式(button)。注意按钮模式需要安装前置插件astrbot_plugin_buttons, 不满足时自动采用可用方式展示搜索结果",
