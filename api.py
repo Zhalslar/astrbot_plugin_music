@@ -19,6 +19,7 @@ class NetEaseMusicAPI:
         }
         self.headers = {"referer": "http://music.163.com"}
         self.cookies = {"appver": "2.0.2"}
+        self.session = aiohttp.ClientSession()
 
     async def _request(
         self,
@@ -27,23 +28,22 @@ class NetEaseMusicAPI:
         method: str = "GET",
     ):
         """统一请求接口"""
-        async with aiohttp.ClientSession() as session:
-            if method.upper() == "POST":
-                async with session.post(
-                    url, headers=self.header, cookies=self.cookies, data=data
-                ) as response:
-                    if response.headers.get("Content-Type") == "application/json":
-                        return await response.json()
-                    else:
-                        return json.loads(await response.text())
-
-            elif method.upper() == "GET":
-                async with session.get(
-                    url, headers=self.headers, cookies=self.cookies
-                ) as response:
+        if method.upper() == "POST":
+            async with self.session.post(
+                url, headers=self.header, cookies=self.cookies, data=data
+            ) as response:
+                if response.headers.get("Content-Type") == "application/json":
                     return await response.json()
-            else:
-                raise ValueError("不支持的请求方式")
+                else:
+                    return json.loads(await response.text())
+
+        elif method.upper() == "GET":
+            async with self.session.get(
+                url, headers=self.headers, cookies=self.cookies
+            ) as response:
+                return await response.json()
+        else:
+            raise ValueError("不支持的请求方式")
 
     async def fetch_data(self, keyword: str, limit=5) -> list[dict]:
         """搜索歌曲"""
@@ -88,8 +88,71 @@ class NetEaseMusicAPI:
             "cover_url": result.get("cover"),
             "audio_url": result.get("music_url"),
         }
+class NetEaseMusicAPINodeJs:
+    """
+    网易云音乐API NodeJs版本
+    """
+    def __init__(self, base_url:str):
+        # http://netease_cloud_music_api:{port}/
+        self.base_url = base_url
+        self.session = aiohttp.ClientSession(base_url)
+        pass
+    async def _request(self, url: str, data: dict = {}, method: str = "GET"):
+        if method.upper() == "POST":
+            async with self.session.post(url, data=data) as response:
+                if response.headers.get("Content-Type") == "application/json":
+                    return await response.json()
+                else:
+                    return json.loads(await response.text())
+        elif method.upper() == "GET":
+            async with self.session.get(url) as response:
+                return await response.json()
+        else:
+            raise ValueError("不支持的请求方式")
 
 
+    async def fetch_data(self, keyword: str, limit=5) -> list[dict]:
+        """搜索歌曲"""
+        url = "/search"
+        data = {"keywords": keyword, "limit": limit, "type": 1, "offset": 0}
+
+        result = await self._request(url, data=data, method="POST")
+        res = [
+            {
+                "id": song["id"],
+                "name": song["name"],
+                "artists": "、".join(artist["name"] for artist in song["artists"]),
+                "duration": song["duration"],
+            }
+            for song in result["result"]["songs"][:limit]
+        ]
+
+        return res
+
+    async def fetch_comments(self, song_id: int):
+        """获取热评"""
+        url = "/comment/hot"
+        data = {
+            "id": song_id,
+            "type": 0,
+        }
+        result = await self._request(url, data=data, method="POST")
+        return result.get("hotComments", [])
+
+    async def fetch_lyrics(self, song_id):
+        """获取歌词"""
+        url = f"{self.base_url}/lyric?id={song_id}"
+        result = await self._request(url)
+        return result.get("lrc", {}).get("lyric", "歌词未找到")
+    async def fetch_extra(self, song_id: str | int) -> dict[str, str]:
+        """
+        获取额外信息
+        """
+        url = "/song/url?id={song_id}"
+        result = await self._request(url)
+        return {
+            "audio_url": result["data"][0].get("url", "")
+        }
 class MusicSearcher:
     """
     用于从指定音乐平台搜索歌曲信息的工具类。
@@ -123,7 +186,7 @@ class MusicSearcher:
             "Accept": "application/json, text/javascript, */*; q=0.01",
             "X-Requested-With": "XMLHttpRequest",
         }
-
+        self.session = aiohttp.ClientSession()
     async def fetch_data(self, song_name: str, platform_type: str, limit: int = 5):
         """
         向音乐接口发送 POST 请求以获取歌曲数据
@@ -139,30 +202,29 @@ class MusicSearcher:
             "page": 1,
         }
 
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.post(
-                    self.base_url, data=data, headers=self.headers
-                ) as response:
-                    if response.status == 200:
-                        result = await response.json()
-                        return [
-                            {
-                                "id": song["songid"],
-                                "name": song.get("title", "未知"),
-                                "artists": song.get("author", "未知"),
-                                "url": song.get("url", "无"),
-                                "link": song.get("link", "无"),
-                                "lyrics": song.get("lrc", "无"),
-                                "cover_url": song.get("pic", "无"),
-                            }
-                            for song in result["songs"][:limit]
-                        ]
-                    else:
-                        logger.error(f"请求失败:{response.status}")
-                        return None
-            except Exception as e:
-                logger.error(f"请求异常: {e}")
-                return None
+        try:
+            async with self.session.post(
+                self.base_url, data=data, headers=self.headers
+            ) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return [
+                        {
+                            "id": song["songid"],
+                            "name": song.get("title", "未知"),
+                            "artists": song.get("author", "未知"),
+                            "url": song.get("url", "无"),
+                            "link": song.get("link", "无"),
+                            "lyrics": song.get("lrc", "无"),
+                            "cover_url": song.get("pic", "无"),
+                        }
+                        for song in result["songs"][:limit]
+                    ]
+                else:
+                    logger.error(f"请求失败:{response.status}")
+                    return None
+        except Exception as e:
+            logger.error(f"请求异常: {e}")
+            return None
 
 

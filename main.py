@@ -37,10 +37,16 @@ class MusicPlugin(Star):
 
         # 默认API
         self.default_api = config.get("default_api", "netease")
+        # 网易云nodejs服务的默认端口
+        self.nodejs_base_url = config.get("nodejs_base_url")
         if self.default_api == "netease":
             from .api import NetEaseMusicAPI
 
             self.api = NetEaseMusicAPI()
+
+        elif self.default_api == "netease_nodejs":
+            from .api import NetEaseMusicAPINodeJs
+            self.api = NetEaseMusicAPINodeJs(base_url=self.nodejs_base_url)
         # elif self.default_api == "tencent":
         #     from .api import TencentMusicAPI
         #     self.api = TencentMusicAPI()
@@ -193,8 +199,8 @@ class MusicPlugin(Star):
         if platform_name == "aiocqhttp" and send_mode == "card":
             assert isinstance(event, AiocqhttpMessageEvent)
             client = event.bot
+            is_private  = event.is_private_chat()
             payloads = {
-                "group_id": int(event.get_group_id()),
                 "message": [
                     {
                         "type": "music",
@@ -205,7 +211,12 @@ class MusicPlugin(Star):
                     }
                 ],
             }
-            await client.api.call_action("send_group_msg", **payloads)
+            if is_private:
+                payloads["user_id"] = event.get_sender_id()
+                await client.api.call_action("send_private_msg", **payloads)
+            else:
+                payloads["group_id"] = event.get_group_id()
+                await client.api.call_action("send_group_msg", **payloads)
 
         # 发语音
         elif (

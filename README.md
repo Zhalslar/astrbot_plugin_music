@@ -42,6 +42,56 @@ git clone https://github.com/Zhalslar/astrbot_plugin_music
 |:-------------:|:-----------------------------:|
 | /点歌 歌名      | 根据序号点歌,可以附加歌手名  |
 
+## 网易云Nodejs模块说明
+
+> 通过网易云Nodejs项目，使用互联网上公开的项目资源 或 自己部署项目 来获得稳定的网易云音源
+
+>项目地址：[网易云Nodejs项目官网](https://neteasecloudmusicapi.js.org/#/)
+- 通过公开的项目获取音源
+
+  如果你不想搭建服务器，又不能使用默认的服务，可以在互联网上搜索`allinurl:eapi_decrypt.html`来寻找公开项目的域名。下面贴一些搜集的公开url。
+  ```text
+  https://163api.qijieya.cn
+  https://zm.armoe.cn
+  http://dg-t.cn:3000
+  http://111.229.38.178:3333
+  https://wyy.xhily.com/
+  http://45.152.64.114:3005
+  http://42.193.244.179:3000
+  https://music-api.focalors.ltd
+  ```
+  举例：插件的`nodejs_base_url`参数设置为`https://163api.qijieya.cn`，`default_api`调为`netease_nodejs`，即可完成配置。可以多尝试几个域名来寻找稳定音源。
+- 部署自己的项目
+
+  通过官网介绍部署项目，获得稳定音源。这里介绍docker compose快速部署。
+
+  修改`astrbot.yml`文件，添加服务
+  ```yaml
+    netease_cloud_music_api:
+      image: binaryify/netease_cloud_music_api
+      container_name: netease_cloud_music_api
+      environment:
+        - http_proxy=
+        - https_proxy=
+        - no_proxy=
+        - HTTP_PROXY=
+        - HTTPS_PROXY=
+        - NO_PROXY=
+      networks:
+        - astrbot_network
+      # ports:
+      #   - "3000:3000" 可以通过公共端口来调试
+  ```
+  然后在`astrbot.yml`文件所在的目录运行命令启动服务：
+  ```cmd
+  docker compose -f astrbot.yml up -d netease_cloud_music_api
+  ```
+  如果你开放了上面的调试端口，可以通过`{主机名}:3000`访问示例页面
+
+  将参数`nodejs_base_url`设置为`http://netease_cloud_music_api:3000`,`default_api`调为`netease_nodejs`，即可完成配置。
+
+  这里的端口号3000可以修改成其他端口，具体见 Nodejs项目 文档。
+
 # TODO
 
 - [ ] 支持多源：网易云音乐、QQ音乐、酷狗音乐...
