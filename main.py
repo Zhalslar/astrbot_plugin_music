@@ -28,7 +28,7 @@ SAVED_SONGS_DIR.mkdir(parents=True, exist_ok=True)
     "astrbot_plugin_music",
     "Zhalslar",
     "音乐搜索、热评",
-    "1.0.0",
+    "1.0.1",
     "https://github.com/Zhalslar/astrbot_plugin_music",
 )
 class MusicPlugin(Star):
@@ -38,7 +38,9 @@ class MusicPlugin(Star):
         # 默认API
         self.default_api = config.get("default_api", "netease")
         # 网易云nodejs服务的默认端口
-        self.nodejs_base_url = config.get("nodejs_base_url")
+        self.nodejs_base_url = config.get(
+            "nodejs_base_url", "http://netease_cloud_music_api:3000"
+        )
         if self.default_api == "netease":
             from .api import NetEaseMusicAPI
 
@@ -200,7 +202,7 @@ class MusicPlugin(Star):
             assert isinstance(event, AiocqhttpMessageEvent)
             client = event.bot
             is_private  = event.is_private_chat()
-            payloads = {
+            payloads: dict = {
                 "message": [
                     {
                         "type": "music",

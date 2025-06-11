@@ -1,7 +1,7 @@
 {
     "default_api":{
         "description": "默认音源",
-        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗; netease_nodejs 网易云音乐nodejs版本 ，暂时仅支持网易云音乐",
+        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗; netease_nodejs:网易云音乐nodejs版本 ，暂时仅支持网易云音乐",
         "type": "string",
         "options": [
             "netease",

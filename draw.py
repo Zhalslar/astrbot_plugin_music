@@ -9,7 +9,6 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 import hashlib
 from astrbot import logger
-from .api import NetEaseMusicAPI
 
 
 font_path = Path("data/plugins/astrbot_plugin_music/simhei.ttf")
