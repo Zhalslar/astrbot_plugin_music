@@ -88,6 +88,8 @@ class NetEaseMusicAPI:
             "cover_url": result.get("cover"),
             "audio_url": result.get("music_url"),
         }
+    async def close(self):
+        await self.session.close()
 class NetEaseMusicAPINodeJs:
     """
     网易云音乐API NodeJs版本
@@ -96,7 +98,7 @@ class NetEaseMusicAPINodeJs:
         # http://netease_cloud_music_api:{port}/
         self.base_url = base_url
         self.session = aiohttp.ClientSession(base_url)
-        pass
+
     async def _request(self, url: str, data: dict = {}, method: str = "GET"):
         if method.upper() == "POST":
             async with self.session.post(url, data=data) as response:
@@ -148,11 +150,14 @@ class NetEaseMusicAPINodeJs:
         """
         获取额外信息
         """
-        url = "/song/url?id={song_id}"
-        result = await self._request(url)
+        url = "/song/url"
+        data = {"id": song_id}
+        result = await self._request(url, data=data, method="POST")
         return {
             "audio_url": result["data"][0].get("url", "")
         }
+    async def close(self):
+        await self.session.close()
 class MusicSearcher:
     """
     用于从指定音乐平台搜索歌曲信息的工具类。
@@ -226,5 +231,5 @@ class MusicSearcher:
         except Exception as e:
             logger.error(f"请求异常: {e}")
             return None
-
-
+    async def close(self):
+        await self.session.close()
