@@ -3,6 +3,7 @@ from pathlib import Path
 import random
 import aiofiles
 import aiohttp
+import traceback
 from astrbot.api.event import filter, AstrMessageEvent
 import astrbot.api.message_components as Comp
 from astrbot.api.star import Context, Star, register
@@ -131,6 +132,7 @@ class MusicPlugin(Star):
             except TimeoutError as _:
                 yield event.plain_result("点歌超时！")
             except Exception as e:
+                logger.error(traceback.format_exc())
                 logger.error("点歌发生错误" + str(e))
 
         event.stop_event()
@@ -303,3 +305,6 @@ class MusicPlugin(Star):
                         logger.error(f"歌曲下载失败，HTTP 状态码：{response.status}")
         except Exception as e:
             logger.error(f"歌曲下载失败，错误信息：{e}")
+    async def terminate(self):
+        '''可选择实现 terminate 函数，当插件被卸载/停用时会调用。'''
+        await self.api.close()
