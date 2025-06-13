@@ -116,5 +116,5 @@ git clone https://github.com/Zhalslar/astrbot_plugin_music
 ## ❤️ Contributors
 
 <a href="https://github.com/Zhalslar/astrbot_plugin_music/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=AstrBotDevs/AstrBot" />
+  <img src="https://contrib.rocks/image?repo=Zhalslar/astrbot_plugin_music" />
 </a>
