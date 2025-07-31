@@ -95,7 +95,7 @@ git clone https://github.com/Zhalslar/astrbot_plugin_music
 # TODO
 
 - [ ] 支持多源：网易云音乐、QQ音乐、酷狗音乐...
-- [x] 兼容多平台：QQ、Telegram、微信...
+- [x] 兼容多平台：QQ、Telegram、~~微信（微信已死）~~...（QQ以外的平台需支持发送语音才适配）
 - [x] 附加一条热评
 - [ ] 支持收藏夹，建立歌单
 - [ ] 支持llm智能推送、llm评价
