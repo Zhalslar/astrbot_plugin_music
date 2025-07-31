@@ -98,9 +98,9 @@ git clone https://github.com/Zhalslar/astrbot_plugin_music
 - [x] 兼容多平台：QQ、Telegram、微信...
 - [x] 附加一条热评
 - [ ] 支持收藏夹，建立歌单
-~~ - [x] QQ平台支持按钮点歌(QQ按钮已死)
 - [ ] 支持llm智能推送、llm评价
 - [ ] 支持自动推送下一首
+~~ - [x] QQ平台支持按钮点歌(QQ按钮已死)~~
 
 ## 👥 贡献指南
 
