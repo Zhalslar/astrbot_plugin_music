@@ -42,7 +42,7 @@ def draw_lyrics(
         draw.textbbox((0, 0), line if line.strip() else "　", font=font)[3]
         for line in cleaned_lines
     ]
-    total_height = sum(line_heights) + line_spacing * (len(cleaned_lines) - 1) + 100
+    total_height = int(sum(line_heights) + line_spacing * (len(cleaned_lines) - 1) + 100)
 
     # 创建渐变背景图像
     img = Image.new("RGB", (image_width, total_height))
