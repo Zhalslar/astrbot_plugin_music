@@ -1,6 +1,7 @@
 name: astrbot_plugin_music # 这是你的插件的唯一识别名。
+display_name: 点歌插件
 desc: 点歌插件，支持按钮点歌、ai点歌、音乐卡片播放、语音播放、热评、歌词、歌单、多音源、无需VIP # 插件简短描述
 help:  # 插件的帮助信息
-version: v1.0.2 # 插件版本号。格式：v1.1.1 或者 v1.1
+version: v1.0.3 # 插件版本号。格式：v1.1.1 或者 v1.1
 author: Zhalslar # 作者
 repo: https://github.com/Zhalslar/astrbot_plugin_music # 插件的仓库地址
