@@ -11,11 +11,11 @@ class NetEaseMusicNodeJS(BaseHttpPlatform):
     def __init__(self, config: dict):
         super().__init__(config)
         self.base_url = config["base_url"]
-        self.session = aiohttp.ClientSession(base_url=self.base_url)
+        self.session = aiohttp.ClientSession()
 
     async def fetch_data(self, keyword: str, limit=5):
         result = await self._request(
-            "/search",
+            url=f"{self.base_url}/search",
             method="POST",
             data={"keywords": keyword, "limit": limit, "type": 1, "offset": 0},
         )
@@ -32,7 +32,7 @@ class NetEaseMusicNodeJS(BaseHttpPlatform):
 
     async def fetch_comments(self, song_id: int):
         result = await self._request(
-            "/comment/hot",
+            url=f"{self.base_url}/comment/hot",
             method="POST",
             data={"id": song_id, "type": 0},
         )
@@ -44,7 +44,7 @@ class NetEaseMusicNodeJS(BaseHttpPlatform):
 
     async def fetch_extra(self, song_id: int):
         result = await self._request(
-            "/song/url",
+            url=f"{self.base_url}/song/url",
             method="POST",
             data={"id": song_id},
         )

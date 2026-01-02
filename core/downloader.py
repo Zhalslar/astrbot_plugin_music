@@ -21,15 +21,15 @@ class Downloader:
         """下载图片"""
         url = url.replace("https://", "http://") if close_ssl else url
         try:
-            response = await self.session.get(url)
-            img_bytes = await response.read()
-            return img_bytes
+            async with self.session.get(url) as response:
+                img_bytes = await response.read()
+                return img_bytes
         except Exception as e:
             logger.error(f"图片下载失败: {e}")
 
     async def download_song(self, url: str, title: str) -> str | None:
         """下载歌曲"""
-        file_path = str(self.song_dir / f"{title}")
+        file_path = str(self.song_dir / f"{title}") # TODO: 需要清洗
         try:
             async with self.session.get(url) as response:
                 if response.status == 200:
