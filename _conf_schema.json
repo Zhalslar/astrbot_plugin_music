@@ -1,31 +1,27 @@
 {
-    "default_api":{
-        "description": "默认音源",
-        "hint": "netease:网易云音乐; qqmusic:QQ音乐; kugou:酷狗; netease_nodejs:网易云音乐nodejs版本 ，暂时仅支持网易云音乐",
+    "music_platform": {
+        "description": "默认使用的音乐平台",
+        "hint": "netease:网易云音乐; netease_nodejs:网易云音乐nodejs版本",
         "type": "string",
         "options": [
             "netease",
-            "qqmusic",
-            "kugou",
             "netease_nodejs"
         ],
         "default": "netease"
     },
-
-    "nodejs_base_url":{
+    "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
         "hint": "如果启用nodejs模块，则需要配置此项",
         "type": "string",
         "default": "http://netease_cloud_music_api:3000"
     },
-    "select_mode":{
+    "select_mode": {
         "description": "选择模式",
-        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、图片模式(image,暂时没做好)。注意按钮模式需要安装前置插件astrbot_plugin_buttons, 不满足时自动采用可用方式展示搜索结果",
+        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、 ...",
         "type": "string",
         "default": "text",
         "options": [
-            "text",
-            "image"
+            "text"
         ]
     },
     "send_mode": {
@@ -39,7 +35,7 @@
             "card"
         ]
     },
-    "enable_comments":  {
+    "enable_comments": {
         "description": "是否启用评论",
         "hint": "开启后在发送歌曲后附加一条评论",
         "type": "bool",
@@ -55,6 +51,25 @@
         "description": "点歌操作的超时时长（秒）",
         "hint": "点歌时用户在此时间内没有进行操作则自动取消点歌",
         "type": "int",
+        "slider": {
+            "min": 30,
+            "max": 300,
+            "step": 10
+        },
         "default": 30
+    },
+    "enc_sec_key": {
+        "description": "网易云野生密钥",
+        "hint": "",
+        "type": "string",
+        "invisible": true,
+        "default": "45c8bcb07e69c6b545d3045559bd300db897509b8720ee2b45a72bf2d3b216ddc77fb10daec4ca54b466f2da1ffac1e67e245fea9d842589dc402b92b262d3495b12165a721aed880bf09a0a99ff94c959d04e49085dc21c78bbbe8e3331827c0ef0035519e89f097511065643120cbc478f9c0af96400ba4649265781fc9079"
+    },
+    "enc_params": {
+        "description": "网易云Params",
+        "hint": "",
+        "type": "string",
+        "invisible": true,
+        "default": "D33zyir4L/58v1qGPcIPjSee79KCzxBIBy507IYDB8EL7jEnp41aDIqpHBhowfQ6iT1Xoka8jD+0p44nRKNKUA0dv+n5RWPOO57dZLVrd+T1J/sNrTdzUhdHhoKRIgegVcXYjYu+CshdtCBe6WEJozBRlaHyLeJtGrABfMOEb4PqgI3h/uELC82S05NtewlbLZ3TOR/TIIhNV6hVTtqHDVHjkekrvEmJzT5pk1UY6r0="
     }
 }

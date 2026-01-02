@@ -1,77 +1,54 @@
-
 import random
 import traceback
-from astrbot.api.event import filter, AstrMessageEvent
+from pathlib import Path
+
 import astrbot.api.message_components as Comp
-from astrbot.api.star import Context, Star, register
+from astrbot.api import logger
+from astrbot.api.event import AstrMessageEvent, filter
+from astrbot.api.star import Context, Star
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.message.components import Record
 from astrbot.core.message.message_event_result import MessageChain
-from astrbot.core.utils.session_waiter import (
-    session_waiter,
-    SessionController,
-)
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
-from astrbot import logger
-from data.plugins.astrbot_plugin_music.draw import draw_lyrics
-from data.plugins.astrbot_plugin_music.utils import format_time
-
-
-@register(
-    "astrbot_plugin_music",
-    "Zhalslar",
-    "音乐搜索、热评",
-    "1.0.1",
-    "https://github.com/Zhalslar/astrbot_plugin_music",
+from astrbot.core.platform.sources.lark.lark_event import LarkMessageEvent
+from astrbot.core.platform.sources.telegram.tg_event import TelegramPlatformEvent
+from astrbot.core.star.star_tools import StarTools
+from astrbot.core.utils.session_waiter import (
+    SessionController,
+    session_waiter,
 )
+
+from .core.downloader import Downloader
+from .core.platform import create_music_platform
+from .core.renderer import MusicRenderer
+from .core.utils import format_time
+
+
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
+        self.config = config
+        self.data_dir = StarTools.get_data_dir()
+        self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
 
-        # 默认API
-        self.default_api = config.get("default_api", "netease")
-        # 网易云nodejs服务的默认端口
-        self.nodejs_base_url = config.get(
-            "nodejs_base_url", "http://netease_cloud_music_api:3000"
-        )
-        if self.default_api == "netease":
-            from .api import NetEaseMusicAPI
+    async def initialize(self):
+        """插件加载时会调用"""
+        self.downloader = Downloader(self.data_dir) # 下载器, 未来拓展时用到
+        self.renderer = MusicRenderer(self.config, self.font_path)
+        self.platform = create_music_platform(self.config)
 
-            self.api = NetEaseMusicAPI()
-
-        elif self.default_api == "netease_nodejs":
-            from .api import NetEaseMusicAPINodeJs
-            self.api = NetEaseMusicAPINodeJs(base_url=self.nodejs_base_url)
-        # elif self.default_api == "tencent":
-        #     from .api import TencentMusicAPI
-        #     self.api = TencentMusicAPI()
-        # elif self.default_api == "kugou":
-        #     from .api import KuGouMusicAPI
-        #     self.api = KuGouMusicAPI()
-
-        # 选择模式
-        self.select_mode = config.get("select_mode", "text")
-
-        # 发送模式
-        self.send_mode = config.get("send_mode", "card")
-
-        # 是否启用评论
-        self.enable_comments = config.get("enable_comments", True)
-
-        # 是否启用歌词
-        self.enable_lyrics = config.get("enable_lyrics", False)
-
-        # 等待超时时长
-        self.timeout = config.get("timeout", 30)
+    async def terminate(self):
+        """当插件被卸载/停用时会调用"""
+        await self.downloader.close()
 
     @filter.command("点歌")
     async def search_song(self, event: AstrMessageEvent):
         """搜索歌曲供用户选择"""
         args = event.message_str.replace("点歌", "").split()
         if not args:
-            yield event.plain_result("没给歌名喵~")
+            yield event.plain_result("没给歌名")
             return
 
         # 解析序号和歌名
@@ -79,7 +56,7 @@ class MusicPlugin(Star):
         song_name = " ".join(args[:-1]) if args[-1].isdigit() else " ".join(args)
 
         # 搜索歌曲
-        songs = await self.api.fetch_data(keyword=song_name)
+        songs = await self.platform.fetch_data(keyword=song_name)
         if not songs:
             yield event.plain_result("没能找到这首歌喵~")
             return
@@ -93,7 +70,7 @@ class MusicPlugin(Star):
         else:
             await self._send_selection(event=event, songs=songs)
 
-            @session_waiter(timeout=self.timeout, record_history_chains=False)  # type: ignore  # noqa: F821
+            @session_waiter(timeout=self.config["timeout"])  # type: ignore  # noqa: F821
             async def empty_mention_waiter(
                 controller: SessionController, event: AstrMessageEvent
             ):
@@ -118,7 +95,7 @@ class MusicPlugin(Star):
         """
         发送歌曲选择
         """
-        if self.select_mode == "image":
+        if self.config["select_mode"] == "image":
             formatted_songs = [
                 f"{index + 1}. {song['name']} - {song['artists']}"
                 for index, song in enumerate(songs)
@@ -136,14 +113,11 @@ class MusicPlugin(Star):
     async def _send_song(self, event: AstrMessageEvent, song: dict):
         """发送歌曲、热评、歌词"""
 
-        platform_name = event.get_platform_name()
-        send_mode = self.send_mode
-
         # 发卡片
-        if platform_name == "aiocqhttp" and send_mode == "card":
-            assert isinstance(event, AiocqhttpMessageEvent)
-            client = event.bot
-            is_private  = event.is_private_chat()
+        if (
+            isinstance(event, AiocqhttpMessageEvent)
+            and self.config["send_mode"] == "card"
+        ):
             payloads: dict = {
                 "message": [
                     {
@@ -155,23 +129,30 @@ class MusicPlugin(Star):
                     }
                 ],
             }
-            if is_private:
+            if event.is_private_chat():
                 payloads["user_id"] = event.get_sender_id()
-                await client.api.call_action("send_private_msg", **payloads)
+                await event.bot.api.call_action("send_private_msg", **payloads)
             else:
                 payloads["group_id"] = event.get_group_id()
-                await client.api.call_action("send_group_msg", **payloads)
+                await event.bot.api.call_action("send_group_msg", **payloads)
 
         # 发语音
         elif (
-            platform_name in ["telegram", "lark", "aiocqhttp"] and send_mode == "record"
+            isinstance(
+                event, LarkMessageEvent | TelegramPlatformEvent | AiocqhttpMessageEvent
+            )
+            and self.config["send_mode"] == "record"
         ):
-            audio_url = (await self.api.fetch_extra(song_id=song["id"]))["audio_url"]
+            audio_url = (await self.platform.fetch_extra(song_id=song["id"]))[
+                "audio_url"
+            ]
             await event.send(event.chain_result([Record.fromURL(audio_url)]))
 
         # 发文字
         else:
-            audio_url = (await self.api.fetch_extra(song_id=song["id"]))["audio_url"]
+            audio_url = (await self.platform.fetch_extra(song_id=song["id"]))[
+                "audio_url"
+            ]
             song_info_str = (
                 f"🎶{song.get('name')} - {song.get('artists')} {format_time(song['duration'])}\n"
                 f"🔗链接：{audio_url}"
@@ -179,17 +160,13 @@ class MusicPlugin(Star):
             await event.send(event.plain_result(song_info_str))
 
         # 发送评论
-        if self.enable_comments:
-            comments = await self.api.fetch_comments(song_id=song["id"])
-            content = random.choice(comments)["content"]
-            await event.send(event.plain_result(content))
+        if self.config["enable_comments"]:
+            if comments:= await self.platform.fetch_comments(song_id=song["id"]):
+                content = random.choice(comments)["content"]
+                await event.send(event.plain_result(content))
 
         # 发送歌词
-        if self.enable_lyrics:
-            lyrics = await self.api.fetch_lyrics(song_id=song["id"])
-            image = draw_lyrics(lyrics)
+        if self.config["enable_lyrics"]:
+            lyrics = await self.platform.fetch_lyrics(song_id=song["id"])
+            image = self.renderer.draw_lyrics(lyrics)
             await event.send(MessageChain(chain=[Comp.Image.fromBytes(image)]))
-
-
-
-
