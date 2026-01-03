@@ -49,13 +49,13 @@ class MusicPlugin(Star):
                     if keyword in word:
                         return player
         # 兜底
-        return (
-            next(
-                player
-                for player in self.players
-                if player.platform.display_name == self.default_player_name
-            )
-            or self.players[0]
+        return next(
+            (
+                p
+                for p in self.players
+                if p.platform.display_name == self.default_player_name
+            ),
+            self.players[0],
         )
 
     async def initialize(self):
@@ -91,7 +91,7 @@ class MusicPlugin(Star):
 
     @filter.command(
         command_name="点歌",
-        aliases=["网易点歌", "NJ点歌", "nj点歌", "TX点歌", "tx点歌"],
+        alias={"网易点歌", "NJ点歌", "nj点歌", "TX点歌", "tx点歌"},
     )
     async def search_song(self, event: AstrMessageEvent):
         """搜索歌曲供用户选择"""
