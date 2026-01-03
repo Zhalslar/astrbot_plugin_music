@@ -39,6 +39,8 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         ]
 
     async def fetch_comments(self, song: Song) -> Song:
+        if song.comments:
+            return song
         result = await self._request(
             url=f"{self.base_url}/comment/hot",
             method="POST",
@@ -49,6 +51,8 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         return song
 
     async def fetch_lyrics(self, song: Song) -> Song:
+        if song.lyrics:
+            return song
         result = await self._request(f"{self.base_url}/lyric?id={song.id}")
         lyric = result.get("lrc", {}).get("lyric")
         if lyric:

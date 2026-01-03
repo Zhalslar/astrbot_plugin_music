@@ -77,6 +77,8 @@ class BaseMusicPlayer(ABC):
         """
         if not (self.config.get("enc_params") and self.config.get("enc_sec_key")):
             return song
+        if song.comments:
+            return song
 
         try:
             result = await self._request(
@@ -100,6 +102,8 @@ class BaseMusicPlayer(ABC):
         """
         默认获取歌词的实现
         """
+        if song.lyrics:
+            return song
         url = f"https://api.qijieya.cn/meting/?server=netease&type=lrc&id={song.id}"
         try:
             result = await self._request(url)
