@@ -1,19 +1,10 @@
-import random
 import traceback
 from pathlib import Path
 
-import astrbot.api.message_components as Comp
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot.core.message.components import Record
-from astrbot.core.message.message_event_result import MessageChain
-from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
-    AiocqhttpMessageEvent,
-)
-from astrbot.core.platform.sources.lark.lark_event import LarkMessageEvent
-from astrbot.core.platform.sources.telegram.tg_event import TelegramPlatformEvent
 from astrbot.core.star.star_tools import StarTools
 from astrbot.core.utils.session_waiter import (
     SessionController,
@@ -21,54 +12,116 @@ from astrbot.core.utils.session_waiter import (
 )
 
 from .core.downloader import Downloader
-from .core.platform import create_music_platform
+from .core.platform import BaseMusicPlayer
 from .core.renderer import MusicRenderer
-from .core.utils import format_time
+from .core.sender import MusicSender
 
 
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
+        self.song_limit = (
+            1 if config["select_mode"] == "single" else config["song_limit"]
+        )
         self.data_dir = StarTools.get_data_dir()
         self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
+        self.player_names: list[str] = [
+            name.split("(", 1)[0].strip() for name in config["enable_players"]
+        ]
+        if not self.player_names:
+            raise ValueError("请至少配置一个音乐平台")
+        self.players: list[BaseMusicPlayer] = []
+        self.default_player_name = (
+            self.config["default_player_name"].split("(", 1)[0].strip()
+        )
+
+    def get_player(
+        self, name: str | None = None, word: str | None = None
+    ) -> BaseMusicPlayer:
+        for player in self.players:
+            if name:
+                p = player.platform
+                if p.display_name == name or p.name == name:
+                    return player
+            elif word:
+                for keyword in player.platform.keywords:
+                    if keyword in word:
+                        return player
+        # 兜底
+        return next(
+            (
+                p
+                for p in self.players
+                if p.platform.display_name == self.default_player_name
+            ),
+            self.players[0],
+        )
 
     async def initialize(self):
         """插件加载时会调用"""
-        self.downloader = Downloader(self.data_dir) # 下载器, 未来拓展时用到
+        self._register_parser()
+        self.downloader = Downloader(self.data_dir)
         self.renderer = MusicRenderer(self.config, self.font_path)
-        self.platform = create_music_platform(self.config)
+        self.sender = MusicSender(self.config, self.renderer)
 
     async def terminate(self):
         """当插件被卸载/停用时会调用"""
         await self.downloader.close()
+        for parser in self.players:
+            await parser.close()
 
-    @filter.command("点歌")
+    def _register_parser(self):
+        """注册音乐播放器"""
+        # 获取所有播放器
+        all_subclass = BaseMusicPlayer.get_all_subclass()
+        # 过滤掉禁用的播放器
+        enabled_classes = [
+            _cls
+            for _cls in all_subclass
+            if _cls.platform.display_name in self.config["enable_players"]
+        ]
+        # 启用的播放器
+        platform_names = []
+        for _cls in enabled_classes:
+            player = _cls(self.config)
+            platform_names.append(player.platform.display_name)
+            self.players.append(player)
+        logger.debug(f"启用音乐播放器: {'、'.join(platform_names)}")
+
+    @filter.command(
+        command_name="点歌",
+        alias={"网易点歌", "NJ点歌", "nj点歌", "TX点歌", "tx点歌"},
+    )
     async def search_song(self, event: AstrMessageEvent):
         """搜索歌曲供用户选择"""
-        args = event.message_str.replace("点歌", "").split()
+        # 解析参数
+        player_arg, _, searchr_arg = event.message_str.partition("点歌")
+        args = searchr_arg.split()
         if not args:
             yield event.plain_result("没给歌名")
             return
-
-        # 解析序号和歌名
         index: int = int(args[-1]) if args[-1].isdigit() else 0
         song_name = " ".join(args[:-1]) if args[-1].isdigit() else " ".join(args)
-
+        player = self.get_player(word=player_arg.strip().lower())
         # 搜索歌曲
-        songs = await self.platform.fetch_data(keyword=song_name)
+        songs = await player.fetch_songs(keyword=song_name, limit=self.song_limit)
         if not songs:
-            yield event.plain_result("没能找到这首歌喵~")
+            yield event.plain_result(f"搜索【{song_name}】无结果")
             return
+
+        # 单曲模式
+        if len(songs) == 1:
+            index = 1
 
         # 输入了序号，直接发送歌曲
         if index and 0 <= index <= len(songs):
             selected_song = songs[int(index) - 1]
-            await self._send_song(event, selected_song)
+            await self.sender.send_song(event, player, selected_song)
 
         # 未提输入序号，等待用户选择歌曲
         else:
-            await self._send_selection(event=event, songs=songs)
+            await self.sender.send_song_selection(event=event, songs=songs)
 
             @session_waiter(timeout=self.config["timeout"])  # type: ignore  # noqa: F821
             async def empty_mention_waiter(
@@ -78,7 +131,7 @@ class MusicPlugin(Star):
                 if not index.isdigit() or int(index) < 1 or int(index) > len(songs):
                     return
                 selected_song = songs[int(index) - 1]
-                await self._send_song(event=event, song=selected_song)
+                await self.sender.send_song(event, player, selected_song)
                 controller.stop()
 
             try:
@@ -91,82 +144,27 @@ class MusicPlugin(Star):
 
         event.stop_event()
 
-    async def _send_selection(self, event: AstrMessageEvent, songs: list) -> None:
+    @filter.command("查歌词")
+    async def query_lyrics(self, event: AstrMessageEvent, song_name: str):
+        """查歌词 <搜索词>"""
+        player = self.get_player()
+        songs = await player.fetch_songs(
+            keyword=song_name, limit=self.config["song_limit"]
+        )
+        if not songs:
+            yield event.plain_result("没找到相关歌曲")
+            return
+        await self.sender.send_lyrics(event, player, songs[0])
+
+    @filter.llm_tool()
+    async def play_song_by_name(self, event: AstrMessageEvent, song_name: str):
         """
-        发送歌曲选择
+        当用户想听歌时，根据歌名（可含歌手）搜索并播放音乐。
+        Args:
+            song_name(string): 歌曲名称或包含歌手的关键词
         """
-        if self.config["select_mode"] == "image":
-            formatted_songs = [
-                f"{index + 1}. {song['name']} - {song['artists']}"
-                for index, song in enumerate(songs)
-            ]
-            image = await self.text_to_image("\n".join(formatted_songs))
-            await event.send(MessageChain(chain=[Comp.Image.fromURL(image)]))
-
-        else:
-            formatted_songs = [
-                f"{index + 1}. {song['name']} - {song['artists']}"
-                for index, song in enumerate(songs)
-            ]
-            await event.send(event.plain_result("\n".join(formatted_songs)))
-
-    async def _send_song(self, event: AstrMessageEvent, song: dict):
-        """发送歌曲、热评、歌词"""
-
-        # 发卡片
-        if (
-            isinstance(event, AiocqhttpMessageEvent)
-            and self.config["send_mode"] == "card"
-        ):
-            payloads: dict = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "163",
-                            "id": str(song["id"]),
-                        },
-                    }
-                ],
-            }
-            if event.is_private_chat():
-                payloads["user_id"] = event.get_sender_id()
-                await event.bot.api.call_action("send_private_msg", **payloads)
-            else:
-                payloads["group_id"] = event.get_group_id()
-                await event.bot.api.call_action("send_group_msg", **payloads)
-
-        # 发语音
-        elif (
-            isinstance(
-                event, LarkMessageEvent | TelegramPlatformEvent | AiocqhttpMessageEvent
-            )
-            and self.config["send_mode"] == "record"
-        ):
-            audio_url = (await self.platform.fetch_extra(song_id=song["id"]))[
-                "audio_url"
-            ]
-            await event.send(event.chain_result([Record.fromURL(audio_url)]))
-
-        # 发文字
-        else:
-            audio_url = (await self.platform.fetch_extra(song_id=song["id"]))[
-                "audio_url"
-            ]
-            song_info_str = (
-                f"🎶{song.get('name')} - {song.get('artists')} {format_time(song['duration'])}\n"
-                f"🔗链接：{audio_url}"
-            )
-            await event.send(event.plain_result(song_info_str))
-
-        # 发送评论
-        if self.config["enable_comments"]:
-            if comments:= await self.platform.fetch_comments(song_id=song["id"]):
-                content = random.choice(comments)["content"]
-                await event.send(event.plain_result(content))
-
-        # 发送歌词
-        if self.config["enable_lyrics"]:
-            lyrics = await self.platform.fetch_lyrics(song_id=song["id"])
-            image = self.renderer.draw_lyrics(lyrics)
-            await event.send(MessageChain(chain=[Comp.Image.fromBytes(image)]))
+        player = self.get_player()
+        songs = await player.fetch_songs(keyword=song_name)
+        if not songs:
+            return "没找到相关歌曲"
+        await self.sender.send_song(event, player, songs[0])

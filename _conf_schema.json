@@ -1,13 +1,29 @@
 {
-    "music_platform": {
-        "description": "默认使用的音乐平台",
-        "hint": "netease:网易云音乐; netease_nodejs:网易云音乐nodejs版本",
+    "enable_players": {
+        "description": "启用的音乐播放器",
+        "hint": "点歌不指定播放器时，默认使用列表中的第一个播放器",
+        "type": "list",
+        "options": [
+            "网易云音乐",
+            "网易云NodeJS版",
+            "TXQQ聚合平台"
+        ],
+        "default": [
+            "网易云音乐",
+            "网易云NodeJS版",
+            "TXQQ聚合平台"
+        ]
+    },
+    "default_player_name": {
+        "description": "默认的播放器",
+        "hint": "请确保默认的播放器已启用",
         "type": "string",
         "options": [
-            "netease",
-            "netease_nodejs"
+            "网易云音乐",
+            "网易云NodeJS版",
+            "TXQQ聚合平台"
         ],
-        "default": "netease"
+        "default": "网易云音乐"
     },
     "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
@@ -15,25 +31,59 @@
         "type": "string",
         "default": "http://netease_cloud_music_api:3000"
     },
+    "txqq_default_platform": {
+        "description": "TXQQ默认使用的平台",
+        "hint": "TXQQ为一个聚合平台, 此处设置TXQQ默认使用的平台",
+        "type": "string",
+        "options": [
+            "qq(QQ音乐)",
+            "netease(网易云音乐)",
+            "kugou(酷狗音乐)",
+            "kuwo(酷我音乐)",
+            "baidu(百度音乐)",
+            "1ting(一听音乐)",
+            "migu(咪咕音乐)",
+            "lizhi(荔枝FM)",
+            "qingting(蜻蜓FM)",
+            "ximalaya(喜马拉雅)",
+            "5singyc(5sing原创)",
+            "5singfc(5sing翻唱)",
+            "kg(全民K歌)"
+        ],
+        "default": "netease(网易云音乐)"
+    },
+    "song_limit": {
+        "description": "搜索歌曲数量限制",
+        "hint": "搜索歌曲数量限制",
+        "type": "int",
+        "slider": {
+            "min": 1,
+            "max": 20,
+            "step": 1
+        },
+        "default": 5
+    },
     "select_mode": {
         "description": "选择模式",
-        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、 ...",
+        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、 图片模式(image)、 单曲模式(single)。 注意单曲模式下将直接默认选取第一首歌曲",
         "type": "string",
-        "default": "text",
         "options": [
-            "text"
-        ]
+            "text",
+            "image",
+            "single"
+        ],
+        "default": "text"
     },
     "send_mode": {
         "description": "发送模式",
-        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文本模式(text), 注意卡片模式仅支持aiocqhttp消息平台, 不满足时自动采用可用方式发送歌曲",
+        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文本模式(text), 注意卡片模式仅QQ发送网易云音乐时可用, 语音模式失败率较高且发送很慢， 文本模式将以链接形式发送",
         "type": "string",
-        "default": "card",
         "options": [
             "text",
             "record",
             "card"
-        ]
+        ],
+        "default": "card"
     },
     "enable_comments": {
         "description": "是否启用评论",
@@ -46,6 +96,12 @@
         "hint": "开启后在发送歌曲后附加一张歌曲图片",
         "type": "bool",
         "default": false
+    },
+    "proxy": {
+        "description": "代理地址",
+        "hint": "如 http://127.0.0.1:7890，留空则直连。作用于网络请求时",
+        "type": "string",
+        "default": ""
     },
     "timeout": {
         "description": "点歌操作的超时时长（秒）",
