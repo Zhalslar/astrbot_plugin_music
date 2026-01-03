@@ -1,25 +1,33 @@
+
 import random
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
 from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot.core.message.components import Image, Plain, Record
+from astrbot.core.message.components import File, Image, Plain, Record
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
+from astrbot.core.platform.sources.discord.discord_platform_event import (
+    DiscordViewComponent,
+)
 from astrbot.core.platform.sources.lark.lark_event import LarkMessageEvent
 from astrbot.core.platform.sources.telegram.tg_event import TelegramPlatformEvent
 
+from .downloader import Downloader
 from .model import Song
 from .platform import BaseMusicPlayer
 from .renderer import MusicRenderer
 
 
 class MusicSender:
-    def __init__(self, config: AstrBotConfig, renderer: MusicRenderer):
+    def __init__(
+        self, config: AstrBotConfig, renderer: MusicRenderer, downloader: Downloader
+    ):
         self.config = config
         self.renderer = renderer
+        self.downloader = downloader
 
     @staticmethod
     def _format_time(duration_ms):
@@ -114,7 +122,28 @@ class MusicSender:
         if not song.audio_url:
             await event.send(event.plain_result(f"【{song.name}】音频获取失败"))
             return
-        await event.send(event.chain_result([Record.fromURL(song.audio_url)]))
+        logger.debug(f"正在发送【{song.name}】音频: {song.audio_url}")
+        seg = Record.fromURL(song.audio_url)
+        await event.send(event.chain_result([seg]))
+
+    async def send_file(
+        self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
+    ):
+        """发文件"""
+        if not song.audio_url:
+            song = await player.fetch_extra(song)
+        if not song.audio_url:
+            await event.send(event.plain_result(f"【{song.name}】音频获取失败"))
+            return
+
+        file_path = await self.downloader.download_song(song.audio_url)
+        if not file_path:
+            await event.send(event.plain_result(f"【{song.name}】音频文件下载失败"))
+            return
+
+        file_name = f"{song.name or file_path.stem}{file_path.suffix}"
+        seg = File(name=file_name, file=str(file_path))
+        await event.send(event.chain_result([seg]))
 
     async def send_text(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
@@ -133,20 +162,22 @@ class MusicSender:
             f"{event.get_sender_name()}（{event.get_sender_id()}）触发点歌事件：{player.platform.display_name} -> {song.name}_{song.artists}"
         )
         # 发卡片
-        if (
-            isinstance(event, AiocqhttpMessageEvent)
-            and self.config["send_mode"] == "card"
+        if self.config["send_mode"] == "card" and isinstance(
+            event, AiocqhttpMessageEvent
         ):
             await self.send_card(event, song)
 
         # 发语音
-        elif (
-            isinstance(
-                event, LarkMessageEvent | TelegramPlatformEvent | AiocqhttpMessageEvent
-            )
-            and self.config["send_mode"] == "record"
+        elif self.config["send_mode"] == "record" and isinstance(
+            event, AiocqhttpMessageEvent | LarkMessageEvent | TelegramPlatformEvent
         ):
             await self.send_record(event, player, song)
+
+        # 发文件
+        elif self.config["send_mode"] == "file" and isinstance(
+            event, AiocqhttpMessageEvent | TelegramPlatformEvent | DiscordViewComponent
+        ):
+            await self.send_file(event, player, song)
 
         # 发文字
         else:
