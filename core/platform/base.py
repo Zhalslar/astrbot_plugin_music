@@ -55,38 +55,29 @@ class BaseMusicPlayer(ABC):
         raise NotImplementedError
 
     # ---------- 可复用方法 ----------
-
     async def fetch_extra(self, song: Song) -> Song:
-        url = f"https://www.hhlqilongzhu.cn/api/dg_wyymusic.php?id={song.id}&br=7&type=json"
-        try:
-            async with self.session.get(url) as resp:
-                result = await resp.json(content_type=None)
-                if not isinstance(result, dict):
-                    return song
-        except Exception as e:
-            logger.warning(f"NetEaseMusic fetch_extra 失败: {e}")
-            return song
+        """默认获取额外信息的实现"""
+        url = f"https://api.qijieya.cn/meting/?type=song&id={song.id}"
 
-        # 自己映射 JSON -> Song 属性
-        mapping = {
-            "title": "title",
-            "singer": "author",
-            "cover": "cover_url",
-            "music_url": "audio_url",
-        }
-        for json_key, attr in mapping.items():
-            value = result.get(json_key)
-            if value and getattr(song, attr) is None:
-                setattr(song, attr, value)
+        result = await self._request(url)
 
+        if result and isinstance(result, list) and len(result) > 0:
+            data = result[0]
+            if not song.audio_url:
+                song.audio_url = data.get("url")
+            if not song.cover_url:
+                song.cover_url = data.get("pic")
+            if not song.lyrics:
+                song.lyrics = data.get("lrc")
         return song
 
     async def fetch_comments(self, song: Song) -> Song:
         """
-        默认获取热门评论的实现（如果配置了 enc_params 和 enc_sec_key）
-        子类可覆盖以适配不同平台
+        默认获取热门评论的实现
         """
         if not (self.config.get("enc_params") and self.config.get("enc_sec_key")):
+            return song
+        if song.comments:
             return song
 
         try:
@@ -107,9 +98,21 @@ class BaseMusicPlayer(ABC):
 
         return song
 
-    async def fetch_lyrics(self, song: Song) -> Song:
-        """默认返回占位歌词，子类可覆盖"""
-        return song
+    async def fetch_lyrics(self, song: Song):
+        """
+        默认获取歌词的实现
+        """
+        if song.lyrics:
+            return song
+        url = f"https://api.qijieya.cn/meting/?server=netease&type=lrc&id={song.id}"
+        try:
+            result = await self._request(url)
+            lyrics = result.get("lyric") if isinstance(result, dict) else str(result)
+            song.lyrics = lyrics
+            return song
+        except Exception as e:
+            logger.warning(f"{self.__class__.__name__} fetch_lyrics 失败: {e}")
+            return song
 
     async def close(self):
         """释放 session"""
@@ -127,7 +130,7 @@ class BaseMusicPlayer(ABC):
         headers: dict | None = None,
         cookies: dict | None = None,
         ssl: bool = True,
-    ) -> dict:
+    ):
         headers = headers or self.HEADERS
 
         if method.upper() == "POST":

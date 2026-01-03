@@ -1,7 +1,18 @@
 {
+    "default_player_name": {
+        "description": "默认的播放器",
+        "hint": "请确保默认的播放器已启用",
+        "type": "string",
+        "options": [
+            "网易云音乐",
+            "网易云NodeJS版",
+            "TXQQ聚合平台"
+        ],
+        "default": "网易云音乐"
+    },
     "enable_players": {
         "description": "启用的音乐播放器",
-        "hint": "点歌不指定播放器时，默认使用列表中的第一个播放器",
+        "hint": "触发命令：网易点歌->网易云音乐; nj点歌->网易云NodeJS版; tx点歌->TXQQ聚合平台; 点歌->默认的播放器",
         "type": "list",
         "options": [
             "网易云音乐",
@@ -13,17 +24,6 @@
             "网易云NodeJS版",
             "TXQQ聚合平台"
         ]
-    },
-    "default_player_name": {
-        "description": "默认的播放器",
-        "hint": "请确保默认的播放器已启用",
-        "type": "string",
-        "options": [
-            "网易云音乐",
-            "网易云NodeJS版",
-            "TXQQ聚合平台"
-        ],
-        "default": "网易云音乐"
     },
     "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
@@ -76,12 +76,13 @@
     },
     "send_mode": {
         "description": "发送模式",
-        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文本模式(text), 注意卡片模式仅QQ发送网易云音乐时可用, 语音模式失败率较高且发送很慢， 文本模式将以链接形式发送",
+        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文件模式(file)、文本模式(text), 注意卡片模式仅QQ发送网易云音乐时可用, 语音模式失败率较高且发送很慢， 文本模式将以链接形式发送",
         "type": "string",
         "options": [
-            "text",
+            "card",
             "record",
-            "card"
+            "file",
+            "text"
         ],
         "default": "card"
     },
@@ -113,6 +114,12 @@
             "step": 10
         },
         "default": 30
+    },
+    "clear_cache": {
+        "description": "重载插件时清空缓存",
+        "hint": "文件模式下需要下载音频文件，缓存目录在data/plugin_data/astrbot_plugin_music/songs，此选项用于重载插件时是否清空缓存",
+        "type": "bool",
+        "default": true
     },
     "enc_sec_key": {
         "description": "网易云野生密钥",

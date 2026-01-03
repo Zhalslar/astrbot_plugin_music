@@ -21,20 +21,40 @@ class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.config = config
+
+        self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
+        self.data_dir = StarTools.get_data_dir()
+        self.songs_dir = self.data_dir / "songs"
+        self.songs_dir.mkdir(parents=True, exist_ok=True)
+
         self.song_limit = (
             1 if config["select_mode"] == "single" else config["song_limit"]
         )
-        self.data_dir = StarTools.get_data_dir()
-        self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
+
         self.player_names: list[str] = [
             name.split("(", 1)[0].strip() for name in config["enable_players"]
         ]
         if not self.player_names:
             raise ValueError("请至少配置一个音乐平台")
+
         self.players: list[BaseMusicPlayer] = []
         self.default_player_name = (
             self.config["default_player_name"].split("(", 1)[0].strip()
         )
+
+    async def initialize(self):
+        """插件加载时会调用"""
+        self._register_parser()
+        self.downloader = Downloader(self.config, self.songs_dir)
+        await self.downloader.initialize()
+        self.renderer = MusicRenderer(self.config, self.font_path)
+        self.sender = MusicSender(self.config, self.renderer, self.downloader)
+
+    async def terminate(self):
+        """当插件被卸载/停用时会调用"""
+        await self.downloader.close()
+        for parser in self.players:
+            await parser.close()
 
     def get_player(
         self, name: str | None = None, word: str | None = None
@@ -57,19 +77,6 @@ class MusicPlugin(Star):
             ),
             self.players[0],
         )
-
-    async def initialize(self):
-        """插件加载时会调用"""
-        self._register_parser()
-        self.downloader = Downloader(self.data_dir)
-        self.renderer = MusicRenderer(self.config, self.font_path)
-        self.sender = MusicSender(self.config, self.renderer)
-
-    async def terminate(self):
-        """当插件被卸载/停用时会调用"""
-        await self.downloader.close()
-        for parser in self.players:
-            await parser.close()
 
     def _register_parser(self):
         """注册音乐播放器"""
@@ -128,7 +135,10 @@ class MusicPlugin(Star):
                 controller: SessionController, event: AstrMessageEvent
             ):
                 index = event.message_str
-                if not index.isdigit() or int(index) < 1 or int(index) > len(songs):
+                if not index.isdigit():
+                    return
+                if int(index) < 1 or int(index) > len(songs):
+                    controller.stop()
                     return
                 selected_song = songs[int(index) - 1]
                 await self.sender.send_song(event, player, selected_song)

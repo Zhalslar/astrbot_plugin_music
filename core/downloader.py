@@ -1,3 +1,5 @@
+import shutil
+import uuid
 from pathlib import Path
 
 import aiofiles
@@ -9,13 +11,25 @@ from astrbot.api import logger
 class Downloader:
     """下载器"""
 
-    def __init__(self, data_dir: Path):
-        self.song_dir = data_dir / "songs"
-        self.song_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, config: dict, songs_dir: Path):
+        self.config = config
+        self.songs_dir = songs_dir
         self.session = aiohttp.ClientSession()
+
+
+    async def initialize(self):
+        if self.config["clear_cache"]:
+            self._ensure_cache_dir()
 
     async def close(self):
         await self.session.close()
+
+    def _ensure_cache_dir(self) -> None:
+        """重建缓存目录：存在则清空，不存在则新建"""
+        if self.songs_dir.exists():
+            shutil.rmtree(self.songs_dir)
+        self.songs_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"缓存目录已重建：{self.songs_dir}")
 
     async def download_image(self, url: str, close_ssl: bool = True) -> bytes | None:
         """下载图片"""
@@ -27,22 +41,23 @@ class Downloader:
         except Exception as e:
             logger.error(f"图片下载失败: {e}")
 
-    async def download_song(self, url: str, title: str) -> str | None:
-        """下载歌曲"""
-        file_path = str(self.song_dir / f"{title}") # TODO: 需要清洗
+    async def download_song(self, url: str) -> Path | None:
+        """下载歌曲，返回保存路径"""
+        song_uuid = uuid.uuid4().hex
+        file_path = self.songs_dir / f"{song_uuid}.mp3"
         try:
             async with self.session.get(url) as response:
-                if response.status == 200:
-                    async with aiofiles.open(file_path, "wb") as f:
-                        # 流式写入文件
-                        while True:
-                            chunk = await response.content.read(1024)
-                            if not chunk:
-                                break
-                            await f.write(chunk)
-                    logger.info(f"歌曲 {title} 下载完成，保存到 {file_path}")
-                    return file_path
-                else:
+                if response.status != 200:
                     logger.error(f"歌曲下载失败，HTTP 状态码：{response.status}")
+                    return None
+                # 流式写入
+                async with aiofiles.open(file_path, "wb") as f:
+                    async for chunk in response.content.iter_chunked(1024):
+                        await f.write(chunk)
+
+            logger.debug(f"歌曲下载完成，保存在：{file_path}")
+            return file_path
+
         except Exception as e:
             logger.error(f"歌曲下载失败，错误信息：{e}")
+            return None
