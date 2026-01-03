@@ -31,7 +31,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         return [
             Song(
                 id=s.get("id"),
-                name=s.ge("name"),
+                name=s.get("name"),
                 artists="、".join(a["name"] for a in s["artists"]),
                 duration=s.get("duration"),
             )
@@ -49,7 +49,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         return song
 
     async def fetch_lyrics(self, song: Song) -> Song:
-        result = await self._request(f"/lyric?id={song.id}")
+        result = await self._request(f"{self.base_url}/lyric?id={song.id}")
         lyric = result.get("lrc", {}).get("lyric")
         if lyric:
             song.lyrics = lyric
