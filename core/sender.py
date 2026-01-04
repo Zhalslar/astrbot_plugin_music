@@ -29,7 +29,7 @@ class MusicSender:
         self.renderer = renderer
         self.downloader = downloader
         self.send_modes = [
-            mode.split("(", 1)[0].strip() for mode in self.config["send_modes"]
+            mode.split("(", 1)[0].strip() for mode in config["send_modes"]
         ]
 
     @staticmethod
@@ -67,7 +67,7 @@ class MusicSender:
         ]
         if title:
             formatted_songs.insert(0, title)
-        if self.config["select_mode"] == "image":
+        if "image" in self.config["select_mode"]:
             msg = "\n\n".join(formatted_songs)
             await event.send(MessageChain(chain=[Plain(msg)], use_t2i_=True))
 
