@@ -23,9 +23,9 @@
     },
     "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
-        "hint": "此项配置决定nodejs服务api的根地址，命令 “网易nj” 使用的是网易云nodejs服务",
+        "hint": "此项配置决定nodejs服务api的根地址，命令 “nj点歌” 使用的是网易云nodejs服务",
         "type": "string",
-        "default": "http://netease_cloud_music_api:3000"
+        "default": "https://163api.qijieya.cn"
     },
     "song_limit": {
         "description": "搜索歌曲数量限制",

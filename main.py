@@ -81,6 +81,8 @@ class MusicPlugin(Star):
     async def on_search_song(self, event: AstrMessageEvent):
         """监听点歌命令： 点歌、网易点歌、网易nj、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌"""
         # 解析参数
+        if not event.is_at_or_wake_command:
+            return
         cmd, _, arg = event.message_str.partition(" ")
         if not arg:
             return
