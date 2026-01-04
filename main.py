@@ -11,6 +11,7 @@ from astrbot.core.utils.session_waiter import (
     session_waiter,
 )
 
+from .core.database import PlaylistDatabase
 from .core.downloader import Downloader
 from .core.platform import BaseMusicPlayer
 from .core.renderer import MusicRenderer
@@ -26,6 +27,13 @@ class MusicPlugin(Star):
         self.data_dir = StarTools.get_data_dir()
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 创建歌单目录
+        self.playlist_dir = self.data_dir / "playlist"
+        self.playlist_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 数据库路径
+        self.db_path = self.data_dir / "playlist.db"
 
         self.song_limit: int = (
             1 if "single" in config["select_mode"] else config["song_limit"]
@@ -44,12 +52,17 @@ class MusicPlugin(Star):
         await self.downloader.initialize()
         self.renderer = MusicRenderer(self.config, self.font_path)
         self.sender = MusicSender(self.config, self.renderer, self.downloader)
+        
+        # 初始化歌单数据库
+        self.playlist_db = PlaylistDatabase(self.db_path)
+        await self.playlist_db.initialize()
 
     async def terminate(self):
         """当插件被卸载/停用时会调用"""
         await self.downloader.close()
         for parser in self.players:
             await parser.close()
+        await self.playlist_db.close()
 
     def get_player(
         self, name: str | None = None, word: str | None = None, default: bool = False
@@ -176,3 +189,86 @@ class MusicPlugin(Star):
         if not songs:
             return "没找到相关歌曲"
         await self.sender.send_song(event, player, songs[0])
+
+    @filter.command("收藏")
+    async def collect_song(self, event: AstrMessageEvent, song_name: str):
+        """收藏 <歌名>"""
+        user_id = str(event.get_sender_id())
+        player = self.get_player(default=True)
+        if not player:
+            yield event.plain_result("无可用播放器")
+            return
+        
+        # 搜索歌曲
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
+        if not songs:
+            yield event.plain_result(f"搜索【{song_name}】无结果")
+            return
+        
+        song = songs[0]
+        platform = player.platform.name
+        
+        # 检查是否已收藏
+        if await self.playlist_db.is_song_in_playlist(user_id, song.id, platform):
+            yield event.plain_result(f"【{song.name}】已在你的歌单中")
+            return
+        
+        # 添加到歌单
+        success = await self.playlist_db.add_song(user_id, song, platform)
+        if success:
+            yield event.plain_result(f"✓ 已收藏【{song.name} - {song.artists}】")
+        else:
+            yield event.plain_result("收藏失败")
+
+    @filter.command("取消收藏")
+    async def uncollect_song(self, event: AstrMessageEvent, song_name: str):
+        """取消收藏 <歌名>"""
+        user_id = str(event.get_sender_id())
+        player = self.get_player(default=True)
+        if not player:
+            yield event.plain_result("无可用播放器")
+            return
+        
+        # 搜索歌曲
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
+        if not songs:
+            yield event.plain_result(f"搜索【{song_name}】无结果")
+            return
+        
+        song = songs[0]
+        platform = player.platform.name
+        
+        # 从歌单移除
+        success = await self.playlist_db.remove_song(user_id, song.id, platform)
+        if success:
+            yield event.plain_result(f"✓ 已取消收藏【{song.name} - {song.artists}】")
+        else:
+            yield event.plain_result(f"【{song.name}】不在你的歌单中")
+
+    @filter.command("查看歌单")
+    async def view_playlist(self, event: AstrMessageEvent):
+        """查看歌单"""
+        user_id = str(event.get_sender_id())
+        
+        # 获取歌单数量
+        count = await self.playlist_db.get_playlist_count(user_id)
+        if count == 0:
+            yield event.plain_result("你的歌单是空的，使用「收藏 <歌名>」来添加歌曲")
+            return
+        
+        # 获取歌单
+        songs = await self.playlist_db.get_user_playlist(user_id, limit=50)
+        if not songs:
+            yield event.plain_result("获取歌单失败")
+            return
+        
+        # 格式化歌单
+        playlist_text = f"📝 你的歌单（共{count}首）\n\n"
+        for i, song in enumerate(songs, 1):
+            duration_str = ""
+            if song.duration:
+                mins, secs = divmod(song.duration // 1000, 60)
+                duration_str = f" [{mins}:{secs:02d}]"
+            playlist_text += f"{i}. {song.name} - {song.artists}{duration_str}\n"
+        
+        yield event.plain_result(playlist_text.strip())
