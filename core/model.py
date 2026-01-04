@@ -27,6 +27,9 @@ class Song:
     audio_url: str | None = None
     """音频播放 URL"""
 
+    path: str | None = None
+    """音频文件路径(预留给持久化)"""
+
     lyrics: str | None = None
     """歌词"""
 
