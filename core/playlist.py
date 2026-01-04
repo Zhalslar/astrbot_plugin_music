@@ -1,4 +1,5 @@
 """歌单管理模块"""
+
 import asyncio
 import sqlite3
 from pathlib import Path
@@ -21,11 +22,11 @@ class Playlist:
         self.data_dir = data_dir
         self.playlist_dir = data_dir / "playlist"
         self.playlist_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.db_path = data_dir / "playlist.db"
         self.limit = limit
-        
-        self._conn: Optional[sqlite3.Connection] = None
+
+        self._conn: sqlite3.Connection | None = None
         self._lock = asyncio.Lock()
 
     async def initialize(self):
@@ -34,7 +35,7 @@ class Playlist:
             self._conn = sqlite3.connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
             cursor = self._conn.cursor()
-            
+
             # 创建歌单表
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS playlist (
@@ -51,12 +52,12 @@ class Playlist:
                     UNIQUE(user_id, song_id, platform)
                 )
             """)
-            
+
             # 创建索引
             cursor.execute("""
                 CREATE INDEX IF NOT EXISTS idx_user_id ON playlist(user_id)
             """)
-            
+
             self._conn.commit()
             logger.info("歌单数据库初始化完成")
 
@@ -78,20 +79,23 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT INTO playlist 
                     (user_id, song_id, song_name, artists, duration, cover_url, audio_url, platform)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    user_id,
-                    song.id,
-                    song.name,
-                    song.artists,
-                    song.duration,
-                    song.cover_url,
-                    song.audio_url,
-                    platform
-                ))
+                """,
+                    (
+                        user_id,
+                        song.id,
+                        song.name,
+                        song.artists,
+                        song.duration,
+                        song.cover_url,
+                        song.audio_url,
+                        platform,
+                    ),
+                )
                 self._conn.commit()
                 logger.debug(f"用户 {user_id} 收藏了歌曲：{song.name}")
                 return True
@@ -114,12 +118,15 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     DELETE FROM playlist 
                     WHERE user_id = ? AND song_id = ? AND platform = ?
-                """, (user_id, song_id, platform))
+                """,
+                    (user_id, song_id, platform),
+                )
                 self._conn.commit()
-                
+
                 if cursor.rowcount > 0:
                     logger.debug(f"用户 {user_id} 取消收藏了歌曲：{song_id}")
                     return True
@@ -130,7 +137,9 @@ class Playlist:
                 logger.error(f"从歌单移除歌曲失败: {e}")
                 return False
 
-    async def get_songs(self, user_id: str, limit: Optional[int] = None) -> list[tuple[Song, str]]:
+    async def get_songs(
+        self, user_id: str, limit: Optional[int] = None
+    ) -> list[tuple[Song, str]]:
         """
         获取用户的歌单
         :param user_id: 用户ID
@@ -139,18 +148,21 @@ class Playlist:
         """
         if limit is None:
             limit = self.limit
-            
+
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT song_id, song_name, artists, duration, cover_url, audio_url, platform
                     FROM playlist
                     WHERE user_id = ?
                     ORDER BY created_at DESC
                     LIMIT ?
-                """, (user_id, limit))
-                
+                """,
+                    (user_id, limit),
+                )
+
                 rows = cursor.fetchall()
                 result = []
                 for row in rows:
@@ -160,11 +172,11 @@ class Playlist:
                         artists=row["artists"],
                         duration=row["duration"],
                         cover_url=row["cover_url"],
-                        audio_url=row["audio_url"]
+                        audio_url=row["audio_url"],
                     )
                     platform = row["platform"]
                     result.append((song, platform))
-                
+
                 return result
             except Exception as e:
                 logger.error(f"获取用户歌单失败: {e}")
@@ -181,11 +193,14 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT COUNT(*) as count FROM playlist
                     WHERE user_id = ? AND song_id = ? AND platform = ?
-                """, (user_id, song_id, platform))
-                
+                """,
+                    (user_id, song_id, platform),
+                )
+
                 row = cursor.fetchone()
                 return row["count"] > 0
             except Exception as e:
@@ -201,11 +216,14 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT COUNT(*) as count FROM playlist
                     WHERE user_id = ?
-                """, (user_id,))
-                
+                """,
+                    (user_id,),
+                )
+
                 row = cursor.fetchone()
                 return row["count"]
             except Exception as e:
@@ -221,10 +239,13 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     SELECT 1 FROM playlist WHERE user_id = ? LIMIT 1
-                """, (user_id,))
-                
+                """,
+                    (user_id,),
+                )
+
                 row = cursor.fetchone()
                 return row is None
             except Exception as e:
@@ -240,9 +261,12 @@ class Playlist:
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
-                cursor.execute("""
+                cursor.execute(
+                    """
                     DELETE FROM playlist WHERE user_id = ?
-                """, (user_id,))
+                """,
+                    (user_id,),
+                )
                 self._conn.commit()
                 logger.debug(f"用户 {user_id} 清空了歌单")
                 return True

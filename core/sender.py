@@ -163,7 +163,7 @@ class MusicSender:
             await event.send(event.plain_result(f"【{song.name}】音频文件下载失败"))
             return False
         try:
-            file_name = f"{song.name or file_path.stem}{file_path.suffix}"
+            file_name = f"{song.name}_{song.artists}{file_path.suffix}"
             seg = File(name=file_name, file=str(file_path))
             await event.send(event.chain_result([seg]))
             return True
