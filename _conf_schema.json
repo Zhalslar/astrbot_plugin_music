@@ -1,7 +1,7 @@
 {
     "default_player_name": {
         "description": "默认搜歌平台",
-        "hint": "",
+        "hint": "定义点歌命令默认使用的平台。所有平台都支持用命令实时调用：网易点歌、nj点歌、QQ点歌、酷狗点歌、酷我点歌、百度点歌、一听点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌",
         "type": "string",
         "options": [
             "netease(网易云音乐)",
@@ -23,9 +23,9 @@
     },
     "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
-        "hint": "此项配置决定nodejs服务api的根地址，命令 “网易nj” 使用的是网易云nodejs服务",
+        "hint": "此项配置决定nodejs服务api的根地址，命令 “nj点歌” 使用的是网易云nodejs服务",
         "type": "string",
-        "default": "http://netease_cloud_music_api:3000"
+        "default": "https://163api.qijieya.cn"
     },
     "song_limit": {
         "description": "搜索歌曲数量限制",
