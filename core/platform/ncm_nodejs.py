@@ -12,19 +12,28 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
     """
 
     platform: ClassVar[Platform] = Platform(
-        name="ncmnj", display_name="网易云NodeJS版", keywords=["nj"]
+        name="netease_nodejs",
+        display_name="网易云NodeJS版",
+        keywords=["nj点歌", "网易nj"],
     )
 
     def __init__(self, config: dict):
         super().__init__(config)
         self.base_url = config["nodejs_base_url"]
 
-    async def fetch_songs(self, keyword: str, limit: int = 5) -> list[Song]:
+    async def fetch_songs(self, keyword: str, limit: int = 5, extra=None) -> list[Song]:
         result = await self._request(
             url=f"{self.base_url}/search",
             method="POST",
             data={"keywords": keyword, "limit": limit, "type": 1, "offset": 0},
         )
+        if (
+            not isinstance(result, dict)
+            or "result" not in result
+            or "songs" not in result["result"]
+        ):
+            logger.error(f"返回了意料之外数据：{result}")
+            return []
 
         songs = result.get("result", {}).get("songs", [])[:limit]
 
@@ -46,6 +55,9 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
             method="POST",
             data={"id": song.id, "type": 0},
         )
+        if not isinstance(result, dict) or "hotComments" not in result:
+            logger.error(f"返回了意料之外数据：{result}")
+            return song
         if comments := result.get("hotComments"):
             song.comments = comments
         return song
@@ -54,7 +66,10 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         if song.lyrics:
             return song
         result = await self._request(f"{self.base_url}/lyric?id={song.id}")
-        lyric = result.get("lrc", {}).get("lyric")
+        if not isinstance(result, dict) or "lrc" not in result:
+            logger.error(f"返回了意料之外数据：{result}")
+            return song
+        lyric = result["lrc"].get("lyric")
         if lyric:
             song.lyrics = lyric
         return song
@@ -66,6 +81,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
                 method="GET",
             )
             if not isinstance(result, dict):
+                logger.error(f"返回了意料之外数据：{result}")
                 return song
         except Exception as e:
             logger.warning(f"{self.__class__.__name__} fetch_extra 失败: {e}")

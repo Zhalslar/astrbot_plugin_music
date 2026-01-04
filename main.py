@@ -27,20 +27,15 @@ class MusicPlugin(Star):
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
 
-        self.song_limit = (
+        self.song_limit: int = (
             1 if config["select_mode"] == "single" else config["song_limit"]
         )
-
-        self.player_names: list[str] = [
-            name.split("(", 1)[0].strip() for name in config["enable_players"]
-        ]
-        if not self.player_names:
-            raise ValueError("请至少配置一个音乐平台")
-
-        self.players: list[BaseMusicPlayer] = []
-        self.default_player_name = (
+        self.default_player_name: str = (
             self.config["default_player_name"].split("(", 1)[0].strip()
         )
+
+        self.players: list[BaseMusicPlayer] = []
+        self.keywords: list[str] = []
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -57,62 +52,54 @@ class MusicPlugin(Star):
             await parser.close()
 
     def get_player(
-        self, name: str | None = None, word: str | None = None
-    ) -> BaseMusicPlayer:
+        self, name: str | None = None, word: str | None = None, default: bool = False
+    ) -> BaseMusicPlayer | None:
+        if default:
+            word = self.default_player_name
         for player in self.players:
             if name:
+                name_ = name.strip().lower()
                 p = player.platform
-                if p.display_name == name or p.name == name:
+                if p.display_name.lower() == name_ or p.name.lower() == name_:
                     return player
             elif word:
+                word_ = word.strip().lower()
                 for keyword in player.platform.keywords:
-                    if keyword in word:
+                    if keyword.lower() in word_:
                         return player
-        # 兜底
-        return next(
-            (
-                p
-                for p in self.players
-                if p.platform.display_name == self.default_player_name
-            ),
-            self.players[0],
-        )
 
     def _register_parser(self):
         """注册音乐播放器"""
-        # 获取所有播放器
         all_subclass = BaseMusicPlayer.get_all_subclass()
-        # 过滤掉禁用的播放器
-        enabled_classes = [
-            _cls
-            for _cls in all_subclass
-            if _cls.platform.display_name in self.config["enable_players"]
-        ]
-        # 启用的播放器
-        platform_names = []
-        for _cls in enabled_classes:
+        for _cls in all_subclass:
             player = _cls(self.config)
-            platform_names.append(player.platform.display_name)
             self.players.append(player)
-        logger.debug(f"启用音乐播放器: {'、'.join(platform_names)}")
+            self.keywords.extend(player.platform.keywords)
+        logger.debug(f"已注册触发词：{self.keywords}")
 
-    @filter.command(
-        command_name="点歌",
-        alias={"网易点歌", "NJ点歌", "nj点歌", "TX点歌", "tx点歌"},
-    )
-    async def search_song(self, event: AstrMessageEvent):
-        """搜索歌曲供用户选择"""
+    @filter.event_message_type(filter.EventMessageType.ALL)
+    async def on_search_song(self, event: AstrMessageEvent):
+        """监听点歌命令： 点歌、网易点歌、网易nj、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌"""
         # 解析参数
-        player_arg, _, searchr_arg = event.message_str.partition("点歌")
-        args = searchr_arg.split()
-        if not args:
-            yield event.plain_result("没给歌名")
+        cmd, _, arg = event.message_str.partition(" ")
+        if not arg:
             return
+        player = self.get_player(word=cmd)
+        if "点歌" == cmd:
+            player = self.get_player(default=True)
+        if not player:
+            return
+        args = arg.split()
         index: int = int(args[-1]) if args[-1].isdigit() else 0
-        song_name = " ".join(args[:-1]) if args[-1].isdigit() else " ".join(args)
-        player = self.get_player(word=player_arg.strip().lower())
+        song_name = arg.removesuffix(str(index))
+        if not song_name:
+            yield event.plain_result("未指定歌名")
+            return
         # 搜索歌曲
-        songs = await player.fetch_songs(keyword=song_name, limit=self.song_limit)
+        logger.debug(f"正在通过{player.platform.display_name}搜索歌曲：{song_name}")
+        songs = await player.fetch_songs(
+            keyword=song_name, limit=self.song_limit, extra=cmd
+        )
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")
             return
@@ -128,19 +115,25 @@ class MusicPlugin(Star):
 
         # 未提输入序号，等待用户选择歌曲
         else:
-            await self.sender.send_song_selection(event=event, songs=songs)
+            title = f"【{player.platform.display_name}】"
+            await self.sender.send_song_selection(event=event, songs=songs, title=title)
 
             @session_waiter(timeout=self.config["timeout"])  # type: ignore  # noqa: F821
             async def empty_mention_waiter(
                 controller: SessionController, event: AstrMessageEvent
             ):
-                index = event.message_str
-                if not index.isdigit():
+                arg = event.message_str.partition(" ")[0]
+                arg_ = arg.strip().lower()
+                for kw in self.keywords:
+                    if kw in arg_:
+                        controller.stop()
+                        return
+                if not arg.isdigit():
                     return
-                if int(index) < 1 or int(index) > len(songs):
+                if int(arg) < 1 or int(arg) > len(songs):
                     controller.stop()
                     return
-                selected_song = songs[int(index) - 1]
+                selected_song = songs[int(arg) - 1]
                 await self.sender.send_song(event, player, selected_song)
                 controller.stop()
 
@@ -157,10 +150,11 @@ class MusicPlugin(Star):
     @filter.command("查歌词")
     async def query_lyrics(self, event: AstrMessageEvent, song_name: str):
         """查歌词 <搜索词>"""
-        player = self.get_player()
-        songs = await player.fetch_songs(
-            keyword=song_name, limit=self.config["song_limit"]
-        )
+        player = self.get_player(default=True)
+        if not player:
+            yield event.plain_result("无可用播放器")
+            return
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
         if not songs:
             yield event.plain_result("没找到相关歌曲")
             return
@@ -173,8 +167,10 @@ class MusicPlugin(Star):
         Args:
             song_name(string): 歌曲名称或包含歌手的关键词
         """
-        player = self.get_player()
-        songs = await player.fetch_songs(keyword=song_name)
+        player = self.get_player(default=True)
+        if not player:
+            return "无可用播放器"
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
         if not songs:
             return "没找到相关歌曲"
         await self.sender.send_song(event, player, songs[0])

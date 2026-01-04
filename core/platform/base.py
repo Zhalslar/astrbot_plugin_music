@@ -1,3 +1,4 @@
+
 import json
 from abc import ABC, abstractmethod
 from typing import ClassVar
@@ -50,8 +51,15 @@ class BaseMusicPlayer(ABC):
     # ---------- 子类必须实现 ----------
 
     @abstractmethod
-    async def fetch_songs(self, keyword: str, **kwargs) -> list[Song]:
-        """搜索歌曲"""
+    async def fetch_songs(
+        self, keyword: str, limit: int, extra: str | None = None
+    ) -> list[Song]:
+        """
+        搜索歌曲
+        :param keyword: 搜索关键字
+        :param limit: 搜索数量
+        :param extra: 额外参数
+        """
         raise NotImplementedError
 
     # ---------- 可复用方法 ----------
@@ -93,7 +101,9 @@ class BaseMusicPlayer(ABC):
             logger.warning(f"{self.__class__.__name__} fetch_comments 失败: {e}")
             return song
 
-        if comments := result.get("hotComments"):
+        comments = result.get("hotComments") if isinstance(result, dict) else []
+
+        if comments:
             song.comments = comments
 
         return song
@@ -145,29 +155,25 @@ class BaseMusicPlayer(ABC):
             return await self._parse_response(resp)
 
     async def _parse_response(self, resp: aiohttp.ClientResponse):
-        """
-        解析 HTTP 响应为 JSON 或文本
-        """
         try:
             resp_text = await resp.text()
+
             if resp.status != 200:
                 logger.warning(f"HTTP 请求返回 {resp.status}: {resp_text[:200]}")
-                return {}
+                return None
 
-            if not resp_text.strip():  # 空字符串直接返回空 dict
+            if not resp_text.strip():
                 logger.warning("HTTP 响应为空")
-                return {}
+                return None
 
-            content_type = resp.headers.get("Content-Type", "")
-            if "application/json" in content_type:
-                return await resp.json(content_type=None)
-
-            # 尝试解析 JSON
             try:
                 return json.loads(resp_text)
             except json.JSONDecodeError:
-                logger.warning(f"HTTP 响应非 JSON: {resp_text}")
-                return {}
+                return resp_text
+
+
         except Exception as e:
             logger.warning(f"解析响应失败: {e}")
-            return {}
+            return None
+
+
