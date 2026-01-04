@@ -1,56 +1,31 @@
 {
     "default_player_name": {
-        "description": "默认的播放器",
-        "hint": "请确保默认的播放器已启用",
+        "description": "默认搜歌平台",
+        "hint": "",
         "type": "string",
         "options": [
-            "网易云音乐",
-            "网易云NodeJS版",
-            "TXQQ聚合平台"
-        ],
-        "default": "网易云音乐"
-    },
-    "enable_players": {
-        "description": "启用的音乐播放器",
-        "hint": "触发命令：网易点歌->网易云音乐; nj点歌->网易云NodeJS版; tx点歌->TXQQ聚合平台; 点歌->默认的播放器",
-        "type": "list",
-        "options": [
-            "网易云音乐",
-            "网易云NodeJS版",
-            "TXQQ聚合平台"
-        ],
-        "default": [
-            "网易云音乐",
-            "网易云NodeJS版",
-            "TXQQ聚合平台"
-        ]
-    },
-    "nodejs_base_url": {
-        "description": "nodejs服务的api根地址",
-        "hint": "如果启用nodejs模块，则需要配置此项",
-        "type": "string",
-        "default": "http://netease_cloud_music_api:3000"
-    },
-    "txqq_default_platform": {
-        "description": "TXQQ默认使用的平台",
-        "hint": "TXQQ为一个聚合平台, 此处设置TXQQ默认使用的平台",
-        "type": "string",
-        "options": [
-            "qq(QQ音乐)",
             "netease(网易云音乐)",
+            "netease_nodejs(网易云nodejs版)",
+            "qq(QQ音乐)",
             "kugou(酷狗音乐)",
             "kuwo(酷我音乐)",
             "baidu(百度音乐)",
             "1ting(一听音乐)",
             "migu(咪咕音乐)",
-            "lizhi(荔枝FM)",
-            "qingting(蜻蜓FM)",
+            "lizhi(荔枝fm)",
+            "qingting(蜻蜓fm)",
             "ximalaya(喜马拉雅)",
             "5singyc(5sing原创)",
             "5singfc(5sing翻唱)",
             "kg(全民K歌)"
         ],
         "default": "netease(网易云音乐)"
+    },
+    "nodejs_base_url": {
+        "description": "nodejs服务的api根地址",
+        "hint": "此项配置决定nodejs服务api的根地址，命令 “网易nj” 使用的是网易云nodejs服务",
+        "type": "string",
+        "default": "http://netease_cloud_music_api:3000"
     },
     "song_limit": {
         "description": "搜索歌曲数量限制",
@@ -74,15 +49,15 @@
         ],
         "default": "text"
     },
-    "send_mode": {
+    "send_modes": {
         "description": "发送模式",
-        "hint": "此配置决定发送歌曲的方式: 卡片模式(card)、语音模式(record)、文件模式(file)、文本模式(text), 注意卡片模式仅QQ发送网易云音乐时可用, 语音模式失败率较高且发送很慢， 文本模式将以链接形式发送",
-        "type": "string",
+        "hint": "此配置决定发送歌曲方式的优先级, 排在前面的模式优先，发送失败时自动尝试下一种模式。 注意: 卡片模式仅QQ发送网易云音乐时可用, 语音模式、文件模式发送较慢，文本模式将以链接形式发送",
+        "type": "list",
         "options": [
-            "card",
-            "record",
-            "file",
-            "text"
+            "card(卡片模式)",
+            "record(语音模式)",
+            "file(文件模式)",
+            "text(文本模式)"
         ],
         "default": "card"
     },

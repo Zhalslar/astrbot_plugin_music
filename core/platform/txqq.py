@@ -1,5 +1,7 @@
 from typing import ClassVar
 
+from astrbot.api import logger
+
 from ..model import Platform, Song
 from .base import BaseMusicPlayer
 
@@ -34,8 +36,37 @@ class TXQQMusic(BaseMusicPlayer):
     """
 
     platform: ClassVar[Platform] = Platform(
-        name="txqq", display_name="TXQQ聚合平台", keywords=["tx"]
+        name="txqq",
+        display_name="TXQQ聚合平台",
+        keywords=[
+            "qq",
+            "酷狗",
+            "酷我",
+            "百度",
+            "一听",
+            "咪咕",
+            "荔枝蜻蜓",
+            "喜马拉雅",
+            "5sing原创",
+            "5sing翻唱",
+            "全民K歌",
+        ],
     )
+
+    PLATFORM_MAP = {
+        "qq": ["qq"],
+        "kugou": ["酷狗"],
+        "kuwo": ["酷我"],
+        "baidu": ["百度"],
+        "1ting": ["一听"],
+        "migu": ["咪咕"],
+        "lizhi": ["荔枝"],
+        "qingting": ["蜻蜓"],
+        "ximalaya": ["喜马拉雅"],
+        "5singyc": ["5sing原创"],
+        "5singfc": ["5sing翻唱"],
+        "kg": ["全民k歌"],
+    }
 
     BASE_URL = "https://music.txqq.pro/"
     HEADERS = {
@@ -52,35 +83,47 @@ class TXQQMusic(BaseMusicPlayer):
 
     def __init__(self, config: dict):
         super().__init__(config)
-        self.search_platform: str = (
-            self.config["txqq_default_platform"].split("(", 1)[0].strip()
-        )
+        self.search_platform: str = "qq"
+
+    def _detect_platform(self, keyword: str) -> str:
+        """
+        从 keyword 中自动识别平台
+        返回 platform_type
+        """
+        raw = keyword.lower()
+
+        for ptype, keys in self.PLATFORM_MAP.items():
+            for k in keys:
+                if k.lower() in raw:
+                    return ptype
+        return self.search_platform
 
     async def fetch_songs(
         self,
         keyword: str,
         limit: int = 5,
-        filter: str = "name",
-        platform: str | None = None,
-        page: int = 1,
+        extra: str | None = None,
     ) -> list[Song]:
         """
         获取歌曲数据
         """
+        platform_type = self._detect_platform(extra) if extra else self.search_platform
         result = await self._request(
             url=self.BASE_URL,
             method="POST",
             data={
                 "input": keyword,
-                "filter": filter,
-                "type": self.search_platform,
-                "page": page,
+                "filter": "name",
+                "type": platform_type,
+                "page": 1,
             },
             headers=self.HEADERS,
         )
-
+        if not isinstance(result, dict) or "data" not in result:
+            logger.error(f"返回了意料之外的数据：{result}")
+            return []
         songs = []
-        for s in result.get("data", []):
+        for s in result["data"]:
             songs.append(
                 Song(
                     id=s.get("songid"),
