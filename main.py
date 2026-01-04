@@ -254,11 +254,7 @@ class MusicPlugin(Star):
         # 格式化歌单
         playlist_text = f"【{user_name}的歌单】\n"
         for i, (song, platform) in enumerate(songs_with_platform, 1):
-            duration_str = ""
-            if song.duration:
-                mins, secs = divmod(song.duration // 1000, 60)
-                duration_str = f" [{mins}:{secs:02d}]"
-            playlist_text += f"{i}. {song.name} - {song.artists}{duration_str}\n"
+            playlist_text += f"{i}. {song.name} - {song.artists}\n"
 
         yield event.plain_result(playlist_text.strip())
 
