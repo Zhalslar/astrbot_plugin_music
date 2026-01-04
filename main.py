@@ -268,14 +268,14 @@ class MusicPlugin(Star):
             return
         
         # 获取歌单
-        songs = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
-        if not songs:
+        playlist = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
+        if not playlist:
             yield event.plain_result("获取歌单失败")
             return
         
         # 格式化歌单
         playlist_text = f"📝 你的歌单（共{count}首）\n\n"
-        for i, song in enumerate(songs, 1):
+        for i, (song, platform) in enumerate(playlist, 1):
             duration_str = ""
             if song.duration:
                 mins, secs = divmod(song.duration // 1000, 60)
@@ -301,27 +301,24 @@ class MusicPlugin(Star):
             return
         
         # 获取歌单
-        songs = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
-        if not songs:
+        playlist = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
+        if not playlist:
             yield event.plain_result("你的歌单是空的")
             return
         
-        if idx > len(songs):
-            yield event.plain_result(f"序号超出范围，你的歌单只有{len(songs)}首歌")
+        if idx > len(playlist):
+            yield event.plain_result(f"序号超出范围，你的歌单只有{len(playlist)}首歌")
             return
         
-        # 获取指定的歌曲
-        song = songs[idx - 1]
+        # 获取指定的歌曲和平台
+        song, platform_name = playlist[idx - 1]
         
-        # 找到对应的播放器（从note中提取平台信息）
-        platform_name = None
-        if song.note and "平台: " in song.note:
-            try:
-                platform_name = song.note.split("平台: ", 1)[1].strip()
-            except IndexError:
-                pass
+        # 找到对应的播放器
+        player = self.get_player(name=platform_name)
+        if not player:
+            # 如果找不到对应平台的播放器，使用默认播放器
+            player = self.get_player(default=True)
         
-        player = self.get_player(name=platform_name) if platform_name else self.get_player(default=True)
         if not player:
             yield event.plain_result("无可用播放器")
             return

@@ -123,12 +123,12 @@ class PlaylistDatabase:
                 logger.error(f"从歌单移除歌曲失败: {e}")
                 return False
 
-    async def get_user_playlist(self, user_id: str, limit: int = 50) -> list[Song]:
+    async def get_user_playlist(self, user_id: str, limit: int = 50) -> list[tuple[Song, str]]:
         """
         获取用户的歌单
         :param user_id: 用户ID
         :param limit: 返回数量限制
-        :return: 歌曲列表
+        :return: (歌曲, 平台名称) 元组列表
         """
         async with self._lock:
             try:
@@ -142,7 +142,7 @@ class PlaylistDatabase:
                 """, (user_id, limit))
                 
                 rows = cursor.fetchall()
-                songs = []
+                result = []
                 for row in rows:
                     song = Song(
                         id=row["song_id"],
@@ -150,12 +150,12 @@ class PlaylistDatabase:
                         artists=row["artists"],
                         duration=row["duration"],
                         cover_url=row["cover_url"],
-                        audio_url=row["audio_url"],
-                        note=f"平台: {row['platform']}"
+                        audio_url=row["audio_url"]
                     )
-                    songs.append(song)
+                    platform = row["platform"]
+                    result.append((song, platform))
                 
-                return songs
+                return result
             except Exception as e:
                 logger.error(f"获取用户歌单失败: {e}")
                 return []
