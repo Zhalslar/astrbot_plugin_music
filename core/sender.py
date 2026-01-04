@@ -1,10 +1,11 @@
 
+import asyncio
 import random
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
 from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot.core.message.components import File, Image, Plain, Record
+from astrbot.core.message.components import File, Image, Record
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
@@ -67,12 +68,15 @@ class MusicSender:
         ]
         if title:
             formatted_songs.insert(0, title)
-        if "image" in self.config["select_mode"]:
-            msg = "\n\n".join(formatted_songs)
-            await event.send(MessageChain(chain=[Plain(msg)], use_t2i_=True))
 
+        msg = "\n".join(formatted_songs)
+        if isinstance(event, AiocqhttpMessageEvent):
+            payloads = {"message": [{"type": "text", "data": {"text": msg}}]}
+            message_id = await self.send_msg(event, payloads)
+            if message_id and self.config["timeout_recall"]:
+                await asyncio.sleep(self.config["timeout"])
+                await event.bot.delete_msg(message_id=message_id)
         else:
-            msg = "\n".join(formatted_songs)
             await event.send(event.plain_result(msg))
 
     async def send_comment(

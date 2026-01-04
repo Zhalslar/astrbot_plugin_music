@@ -40,11 +40,10 @@
     },
     "select_mode": {
         "description": "选择模式",
-        "hint": "此配置决定搜索歌曲的展示方法。 注意: 图片模式请自行依靠插件下游的t2i实现, 单曲模式默认选取第一首歌曲",
+        "hint": "此配置决定搜索歌曲的展示方法。单曲模式默认选取第一首歌曲",
         "type": "string",
         "options": [
             "text(文本模式)",
-            "image(图片模式)",
             "single(单曲模式)"
         ],
         "default": "text(文本模式)"
@@ -94,6 +93,12 @@
             "step": 10
         },
         "default": 30
+    },
+    "timeout_recall": { 
+        "description": "撤回选歌消息",
+        "hint": "达到超时时长后，撤回之前发送的选歌消息 (仅 aiocqhttp 平台支持)",
+        "type": "bool",
+        "default": true
     },
     "clear_cache": {
         "description": "重载插件时清空缓存",

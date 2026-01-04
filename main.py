@@ -1,3 +1,4 @@
+import asyncio
 import traceback
 from pathlib import Path
 
@@ -122,7 +123,9 @@ class MusicPlugin(Star):
         # 未提输入序号，等待用户选择歌曲
         else:
             title = f"【{player.platform.display_name}】"
-            await self.sender.send_song_selection(event=event, songs=songs, title=title)
+            asyncio.create_task(
+                self.sender.send_song_selection(event=event, songs=songs, title=title)
+            )
 
             @session_waiter(timeout=self.config["timeout"])  # type: ignore  # noqa: F821
             async def empty_mention_waiter(
