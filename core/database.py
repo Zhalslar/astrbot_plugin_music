@@ -70,9 +70,21 @@ class PlaylistDatabase:
         """
         async with self._lock:
             try:
+                # 先检查是否已存在
                 cursor = self._conn.cursor()
                 cursor.execute("""
-                    INSERT OR IGNORE INTO playlist 
+                    SELECT COUNT(*) as count FROM playlist
+                    WHERE user_id = ? AND song_id = ? AND platform = ?
+                """, (user_id, song.id, platform))
+                
+                row = cursor.fetchone()
+                if row["count"] > 0:
+                    logger.debug(f"歌曲 {song.name} 已在用户 {user_id} 的歌单中")
+                    return False
+                
+                # 插入新歌曲
+                cursor.execute("""
+                    INSERT INTO playlist 
                     (user_id, song_id, song_name, artists, duration, cover_url, audio_url, platform)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -86,14 +98,8 @@ class PlaylistDatabase:
                     platform
                 ))
                 self._conn.commit()
-                
-                # 检查是否实际插入了数据（不是已存在）
-                if cursor.rowcount > 0:
-                    logger.debug(f"用户 {user_id} 收藏了歌曲：{song.name}")
-                    return True
-                else:
-                    logger.debug(f"歌曲 {song.name} 已在用户 {user_id} 的歌单中")
-                    return False
+                logger.debug(f"用户 {user_id} 收藏了歌曲：{song.name}")
+                return True
             except Exception as e:
                 logger.error(f"添加歌曲到歌单失败: {e}")
                 return False

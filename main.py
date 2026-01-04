@@ -44,6 +44,9 @@ class MusicPlugin(Star):
 
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
+        
+        # 歌单配置
+        self.playlist_limit = 50  # 歌单显示数量限制
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -89,6 +92,19 @@ class MusicPlugin(Star):
             self.players.append(player)
             self.keywords.extend(player.platform.keywords)
         logger.debug(f"已注册触发词：{self.keywords}")
+
+    async def _search_song(self, song_name: str, player: BaseMusicPlayer | None = None) -> list:
+        """
+        搜索歌曲的辅助方法
+        :param song_name: 歌曲名称
+        :param player: 播放器，如果为None则使用默认播放器
+        :return: 歌曲列表
+        """
+        if player is None:
+            player = self.get_player(default=True)
+        if not player:
+            return []
+        return await player.fetch_songs(keyword=song_name, limit=1)
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_search_song(self, event: AstrMessageEvent):
@@ -200,7 +216,7 @@ class MusicPlugin(Star):
             return
         
         # 搜索歌曲
-        songs = await player.fetch_songs(keyword=song_name, limit=1)
+        songs = await self._search_song(song_name, player)
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")
             return
@@ -230,7 +246,7 @@ class MusicPlugin(Star):
             return
         
         # 搜索歌曲
-        songs = await player.fetch_songs(keyword=song_name, limit=1)
+        songs = await self._search_song(song_name, player)
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")
             return
@@ -257,7 +273,7 @@ class MusicPlugin(Star):
             return
         
         # 获取歌单
-        songs = await self.playlist_db.get_user_playlist(user_id, limit=50)
+        songs = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
         if not songs:
             yield event.plain_result("获取歌单失败")
             return
@@ -290,7 +306,7 @@ class MusicPlugin(Star):
             return
         
         # 获取歌单
-        songs = await self.playlist_db.get_user_playlist(user_id, limit=50)
+        songs = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
         if not songs:
             yield event.plain_result("你的歌单是空的")
             return
@@ -305,7 +321,10 @@ class MusicPlugin(Star):
         # 找到对应的播放器（从note中提取平台信息）
         platform_name = None
         if song.note and "平台: " in song.note:
-            platform_name = song.note.split("平台: ")[1].strip()
+            try:
+                platform_name = song.note.split("平台: ", 1)[1].strip()
+            except IndexError:
+                pass
         
         player = self.get_player(name=platform_name) if platform_name else self.get_player(default=True)
         if not player:
