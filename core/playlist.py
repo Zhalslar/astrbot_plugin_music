@@ -1,3 +1,4 @@
+"""歌单管理模块"""
 import asyncio
 import sqlite3
 from pathlib import Path
@@ -8,16 +9,22 @@ from astrbot.api import logger
 from .model import Song
 
 
-class PlaylistDatabase:
-    """歌单数据库管理类"""
+class Playlist:
+    """歌单管理类，封装歌单的所有操作"""
 
-    def __init__(self, db_path: Path):
+    def __init__(self, data_dir: Path, limit: int = 50):
         """
-        初始化数据库
-        :param db_path: 数据库文件路径
+        初始化歌单管理器
+        :param data_dir: 数据目录路径
+        :param limit: 歌单显示数量限制
         """
-        self.db_path = db_path
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.data_dir = data_dir
+        self.playlist_dir = data_dir / "playlist"
+        self.playlist_dir.mkdir(parents=True, exist_ok=True)
+        
+        self.db_path = data_dir / "playlist.db"
+        self.limit = limit
+        
         self._conn: Optional[sqlite3.Connection] = None
         self._lock = asyncio.Lock()
 
@@ -123,13 +130,16 @@ class PlaylistDatabase:
                 logger.error(f"从歌单移除歌曲失败: {e}")
                 return False
 
-    async def get_user_playlist(self, user_id: str, limit: int = 50) -> list[tuple[Song, str]]:
+    async def get_songs(self, user_id: str, limit: Optional[int] = None) -> list[tuple[Song, str]]:
         """
         获取用户的歌单
         :param user_id: 用户ID
-        :param limit: 返回数量限制
+        :param limit: 返回数量限制，默认使用初始化时的limit
         :return: (歌曲, 平台名称) 元组列表
         """
+        if limit is None:
+            limit = self.limit
+            
         async with self._lock:
             try:
                 cursor = self._conn.cursor()
@@ -160,7 +170,7 @@ class PlaylistDatabase:
                 logger.error(f"获取用户歌单失败: {e}")
                 return []
 
-    async def is_song_in_playlist(self, user_id: str, song_id: str, platform: str) -> bool:
+    async def has_song(self, user_id: str, song_id: str, platform: str) -> bool:
         """
         检查歌曲是否在歌单中
         :param user_id: 用户ID
@@ -182,7 +192,7 @@ class PlaylistDatabase:
                 logger.error(f"检查歌曲是否在歌单中失败: {e}")
                 return False
 
-    async def get_playlist_count(self, user_id: str) -> int:
+    async def get_count(self, user_id: str) -> int:
         """
         获取用户歌单数量
         :param user_id: 用户ID
@@ -201,3 +211,31 @@ class PlaylistDatabase:
             except Exception as e:
                 logger.error(f"获取歌单数量失败: {e}")
                 return 0
+
+    async def is_empty(self, user_id: str) -> bool:
+        """
+        检查用户歌单是否为空
+        :param user_id: 用户ID
+        :return: 是否为空
+        """
+        count = await self.get_count(user_id)
+        return count == 0
+
+    async def clear(self, user_id: str) -> bool:
+        """
+        清空用户歌单
+        :param user_id: 用户ID
+        :return: 是否清空成功
+        """
+        async with self._lock:
+            try:
+                cursor = self._conn.cursor()
+                cursor.execute("""
+                    DELETE FROM playlist WHERE user_id = ?
+                """, (user_id,))
+                self._conn.commit()
+                logger.debug(f"用户 {user_id} 清空了歌单")
+                return True
+            except Exception as e:
+                logger.error(f"清空歌单失败: {e}")
+                return False

@@ -11,9 +11,9 @@ from astrbot.core.utils.session_waiter import (
     session_waiter,
 )
 
-from .core.database import PlaylistDatabase
 from .core.downloader import Downloader
 from .core.platform import BaseMusicPlayer
+from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
 
@@ -27,13 +27,6 @@ class MusicPlugin(Star):
         self.data_dir = StarTools.get_data_dir()
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 创建歌单目录
-        self.playlist_dir = self.data_dir / "playlist"
-        self.playlist_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 数据库路径
-        self.db_path = self.data_dir / "playlist.db"
 
         self.song_limit: int = (
             1 if "single" in config["select_mode"] else config["song_limit"]
@@ -45,8 +38,8 @@ class MusicPlugin(Star):
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
         
-        # 歌单配置
-        self.playlist_limit = 50  # 歌单显示数量限制
+        # 初始化歌单管理器
+        self.playlist = Playlist(self.data_dir, limit=50)
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -56,16 +49,15 @@ class MusicPlugin(Star):
         self.renderer = MusicRenderer(self.config, self.font_path)
         self.sender = MusicSender(self.config, self.renderer, self.downloader)
         
-        # 初始化歌单数据库
-        self.playlist_db = PlaylistDatabase(self.db_path)
-        await self.playlist_db.initialize()
+        # 初始化歌单
+        await self.playlist.initialize()
 
     async def terminate(self):
         """当插件被卸载/停用时会调用"""
         await self.downloader.close()
         for parser in self.players:
             await parser.close()
-        await self.playlist_db.close()
+        await self.playlist.close()
 
     def get_player(
         self, name: str | None = None, word: str | None = None, default: bool = False
@@ -224,8 +216,8 @@ class MusicPlugin(Star):
         song = songs[0]
         platform = player.platform.name
         
-        # 添加到歌单（数据库会自动处理重复）
-        success = await self.playlist_db.add_song(user_id, song, platform)
+        # 添加到歌单
+        success = await self.playlist.add_song(user_id, song, platform)
         if success:
             yield event.plain_result(f"✓ 已收藏【{song.name} - {song.artists}】")
         else:
@@ -250,7 +242,7 @@ class MusicPlugin(Star):
         platform = player.platform.name
         
         # 从歌单移除
-        success = await self.playlist_db.remove_song(user_id, song.id, platform)
+        success = await self.playlist.remove_song(user_id, song.id, platform)
         if success:
             yield event.plain_result(f"✓ 已取消收藏【{song.name} - {song.artists}】")
         else:
@@ -261,21 +253,23 @@ class MusicPlugin(Star):
         """查看歌单"""
         user_id = str(event.get_sender_id())
         
-        # 获取歌单数量
-        count = await self.playlist_db.get_playlist_count(user_id)
-        if count == 0:
+        # 检查歌单是否为空
+        if await self.playlist.is_empty(user_id):
             yield event.plain_result("你的歌单是空的，使用「收藏 <歌名>」来添加歌曲")
             return
         
         # 获取歌单
-        playlist = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
-        if not playlist:
+        songs_with_platform = await self.playlist.get_songs(user_id)
+        if not songs_with_platform:
             yield event.plain_result("获取歌单失败")
             return
         
+        # 获取歌单数量
+        count = await self.playlist.get_count(user_id)
+        
         # 格式化歌单
         playlist_text = f"📝 你的歌单（共{count}首）\n\n"
-        for i, (song, platform) in enumerate(playlist, 1):
+        for i, (song, platform) in enumerate(songs_with_platform, 1):
             duration_str = ""
             if song.duration:
                 mins, secs = divmod(song.duration // 1000, 60)
@@ -301,17 +295,17 @@ class MusicPlugin(Star):
             return
         
         # 获取歌单
-        playlist = await self.playlist_db.get_user_playlist(user_id, limit=self.playlist_limit)
-        if not playlist:
+        songs_with_platform = await self.playlist.get_songs(user_id)
+        if not songs_with_platform:
             yield event.plain_result("你的歌单是空的")
             return
         
-        if idx > len(playlist):
-            yield event.plain_result(f"序号超出范围，你的歌单只有{len(playlist)}首歌")
+        if idx > len(songs_with_platform):
+            yield event.plain_result(f"序号超出范围，你的歌单只有{len(songs_with_platform)}首歌")
             return
         
         # 获取指定的歌曲和平台
-        song, platform_name = playlist[idx - 1]
+        song, platform_name = songs_with_platform[idx - 1]
         
         # 找到对应的播放器
         player = self.get_player(name=platform_name)
