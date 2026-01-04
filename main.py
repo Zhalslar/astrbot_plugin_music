@@ -28,7 +28,7 @@ class MusicPlugin(Star):
         self.songs_dir.mkdir(parents=True, exist_ok=True)
 
         self.song_limit: int = (
-            1 if config["select_mode"] == "single" else config["song_limit"]
+            1 if "single" in config["select_mode"] else config["song_limit"]
         )
         self.default_player_name: str = (
             self.config["default_player_name"].split("(", 1)[0].strip()

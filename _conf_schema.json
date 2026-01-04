@@ -40,14 +40,14 @@
     },
     "select_mode": {
         "description": "选择模式",
-        "hint": "此配置决定搜索歌曲的展示方法：文本模式(text)、 图片模式(image)、 单曲模式(single)。 注意单曲模式下将直接默认选取第一首歌曲",
+        "hint": "此配置决定搜索歌曲的展示方法。 注意: 图片模式请自行依靠插件下游的t2i实现, 单曲模式默认选取第一首歌曲",
         "type": "string",
         "options": [
-            "text",
-            "image",
-            "single"
+            "text(文本模式)",
+            "image(图片模式)",
+            "single(单曲模式)"
         ],
-        "default": "text"
+        "default": "text(文本模式)"
     },
     "send_modes": {
         "description": "发送模式",
@@ -59,7 +59,12 @@
             "file(文件模式)",
             "text(文本模式)"
         ],
-        "default": "card"
+        "default": [
+            "card(卡片模式)",
+            "record(语音模式)",
+            "file(文件模式)",
+            "text(文本模式)"
+        ]
     },
     "enable_comments": {
         "description": "是否启用评论",
