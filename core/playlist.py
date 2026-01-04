@@ -218,8 +218,18 @@ class Playlist:
         :param user_id: 用户ID
         :return: 是否为空
         """
-        count = await self.get_count(user_id)
-        return count == 0
+        async with self._lock:
+            try:
+                cursor = self._conn.cursor()
+                cursor.execute("""
+                    SELECT 1 FROM playlist WHERE user_id = ? LIMIT 1
+                """, (user_id,))
+                
+                row = cursor.fetchone()
+                return row is None
+            except Exception as e:
+                logger.error(f"检查歌单是否为空失败: {e}")
+                return True  # 出错时默认返回空
 
     async def clear(self, user_id: str) -> bool:
         """
