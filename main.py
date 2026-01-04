@@ -271,4 +271,46 @@ class MusicPlugin(Star):
                 duration_str = f" [{mins}:{secs:02d}]"
             playlist_text += f"{i}. {song.name} - {song.artists}{duration_str}\n"
         
+        playlist_text += "\n使用「歌单点歌 <序号>」来播放歌单中的歌曲"
         yield event.plain_result(playlist_text.strip())
+
+    @filter.command("歌单点歌")
+    async def play_from_playlist(self, event: AstrMessageEvent, index: str):
+        """歌单点歌 <序号>"""
+        user_id = str(event.get_sender_id())
+        
+        # 验证序号
+        if not index.isdigit():
+            yield event.plain_result("请输入有效的序号")
+            return
+        
+        idx = int(index)
+        if idx < 1:
+            yield event.plain_result("序号必须大于0")
+            return
+        
+        # 获取歌单
+        songs = await self.playlist_db.get_user_playlist(user_id, limit=50)
+        if not songs:
+            yield event.plain_result("你的歌单是空的")
+            return
+        
+        if idx > len(songs):
+            yield event.plain_result(f"序号超出范围，你的歌单只有{len(songs)}首歌")
+            return
+        
+        # 获取指定的歌曲
+        song = songs[idx - 1]
+        
+        # 找到对应的播放器（从note中提取平台信息）
+        platform_name = None
+        if song.note and "平台: " in song.note:
+            platform_name = song.note.split("平台: ")[1].strip()
+        
+        player = self.get_player(name=platform_name) if platform_name else self.get_player(default=True)
+        if not player:
+            yield event.plain_result("无可用播放器")
+            return
+        
+        # 发送歌曲
+        await self.sender.send_song(event, player, song)
