@@ -70,19 +70,7 @@ class PlaylistDatabase:
         """
         async with self._lock:
             try:
-                # 先检查是否已存在
                 cursor = self._conn.cursor()
-                cursor.execute("""
-                    SELECT COUNT(*) as count FROM playlist
-                    WHERE user_id = ? AND song_id = ? AND platform = ?
-                """, (user_id, song.id, platform))
-                
-                row = cursor.fetchone()
-                if row["count"] > 0:
-                    logger.debug(f"歌曲 {song.name} 已在用户 {user_id} 的歌单中")
-                    return False
-                
-                # 插入新歌曲
                 cursor.execute("""
                     INSERT INTO playlist 
                     (user_id, song_id, song_name, artists, duration, cover_url, audio_url, platform)
@@ -100,6 +88,10 @@ class PlaylistDatabase:
                 self._conn.commit()
                 logger.debug(f"用户 {user_id} 收藏了歌曲：{song.name}")
                 return True
+            except sqlite3.IntegrityError:
+                # 违反唯一约束，歌曲已存在
+                logger.debug(f"歌曲 {song.name} 已在用户 {user_id} 的歌单中")
+                return False
             except Exception as e:
                 logger.error(f"添加歌曲到歌单失败: {e}")
                 return False

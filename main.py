@@ -224,17 +224,12 @@ class MusicPlugin(Star):
         song = songs[0]
         platform = player.platform.name
         
-        # 检查是否已收藏
-        if await self.playlist_db.is_song_in_playlist(user_id, song.id, platform):
-            yield event.plain_result(f"【{song.name}】已在你的歌单中")
-            return
-        
-        # 添加到歌单
+        # 添加到歌单（数据库会自动处理重复）
         success = await self.playlist_db.add_song(user_id, song, platform)
         if success:
             yield event.plain_result(f"✓ 已收藏【{song.name} - {song.artists}】")
         else:
-            yield event.plain_result("收藏失败")
+            yield event.plain_result(f"【{song.name}】已在你的歌单中")
 
     @filter.command("取消收藏")
     async def uncollect_song(self, event: AstrMessageEvent, song_name: str):
