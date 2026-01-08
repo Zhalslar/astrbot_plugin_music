@@ -10,11 +10,6 @@ from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
-from astrbot.core.platform.sources.discord.discord_platform_event import (
-    DiscordViewComponent,
-)
-from astrbot.core.platform.sources.lark.lark_event import LarkMessageEvent
-from astrbot.core.platform.sources.telegram.tg_event import TelegramPlatformEvent
 
 from .downloader import Downloader
 from .model import Song
@@ -202,11 +197,18 @@ class MusicSender:
             return isinstance(event, AiocqhttpMessageEvent) and isinstance(
                 player, NetEaseMusic | NetEaseMusicNodeJS
             )
+        # 延迟导入，防止初始化卡顿
+        from astrbot.core.platform.sources.discord.discord_platform_event import (
+            DiscordViewComponent,
+        )
+        from astrbot.core.platform.sources.telegram.tg_event import (
+            TelegramPlatformEvent,
+        )
 
         if mode == "record":
             return isinstance(
                 event,
-                AiocqhttpMessageEvent | LarkMessageEvent | TelegramPlatformEvent,
+                AiocqhttpMessageEvent | TelegramPlatformEvent,
             )
 
         if mode == "file":

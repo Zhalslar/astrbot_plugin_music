@@ -39,7 +39,7 @@ class MusicPlugin(Star):
 
     async def initialize(self):
         """插件加载时会调用"""
-        self._register_parser()
+        self._register_player()
         self.downloader = Downloader(self.config, self.songs_dir)
         await self.downloader.initialize()
         self.renderer = MusicRenderer(self.config, self.font_path)
@@ -73,7 +73,7 @@ class MusicPlugin(Star):
                     if keyword.lower() in word_:
                         return player
 
-    def _register_parser(self):
+    def _register_player(self):
         """注册音乐播放器"""
         all_subclass = BaseMusicPlayer.get_all_subclass()
         for _cls in all_subclass:
