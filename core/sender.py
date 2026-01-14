@@ -4,13 +4,13 @@ import random
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
-from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.message.components import File, Image, Record
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
 )
 
+from .config import PluginConfig
 from .downloader import Downloader
 from .model import Song
 from .platform import BaseMusicPlayer, NetEaseMusic, NetEaseMusicNodeJS
@@ -19,9 +19,9 @@ from .renderer import MusicRenderer
 
 class MusicSender:
     def __init__(
-        self, config: AstrBotConfig, renderer: MusicRenderer, downloader: Downloader
+        self, config: PluginConfig, renderer: MusicRenderer, downloader: Downloader
     ):
-        self.config = config
+        self.cfg = config
         self.renderer = renderer
         self.downloader = downloader
         self.send_modes = [
@@ -68,8 +68,8 @@ class MusicSender:
         if isinstance(event, AiocqhttpMessageEvent):
             payloads = {"message": [{"type": "text", "data": {"text": msg}}]}
             message_id = await self.send_msg(event, payloads)
-            if message_id and self.config["timeout_recall"]:
-                await asyncio.sleep(self.config["timeout"])
+            if message_id and self.cfg.timeout_recall:
+                await asyncio.sleep(self.cfg.timeout)
                 await event.bot.delete_msg(message_id=message_id)
         else:
             await event.send(event.plain_result(msg))
@@ -256,8 +256,8 @@ class MusicSender:
             await event.send(event.plain_result("歌曲发送失败"))
 
         # 附加内容不影响主流程
-        if sent and self.config["enable_comments"]:
+        if sent and self.cfg.enable_comments:
             await self.send_comment(event, player, song)
 
-        if sent and self.config["enable_lyrics"]:
+        if sent and self.cfg.enable_lyrics:
             await self.send_lyrics(event, player, song)

@@ -2,6 +2,7 @@ from typing import ClassVar
 
 from astrbot.api import logger
 
+from ..config import PluginConfig
 from ..model import Platform, Song
 from .base import BaseMusicPlayer
 
@@ -81,7 +82,7 @@ class TXQQMusic(BaseMusicPlayer):
         "Referer": "https://music.txqq.pro",
     }
 
-    def __init__(self, config: dict):
+    def __init__(self, config: PluginConfig):
         super().__init__(config)
         self.search_platform: str = "qq"
 
