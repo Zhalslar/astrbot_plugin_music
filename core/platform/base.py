@@ -7,6 +7,7 @@ import aiohttp
 
 from astrbot.api import logger
 
+from ..config import PluginConfig
 from ..model import Platform, Song
 
 
@@ -32,8 +33,8 @@ class BaseMusicPlayer(ABC):
         )
     }
 
-    def __init__(self, config: dict):
-        self.config = config
+    def __init__(self, config: PluginConfig):
+        self.cfg = config
         self.proxy = config["proxy"] or None
         self.session = aiohttp.ClientSession(proxy=self.proxy)
 
@@ -83,8 +84,6 @@ class BaseMusicPlayer(ABC):
         """
         默认获取热门评论的实现
         """
-        if not (self.config.get("enc_params") and self.config.get("enc_sec_key")):
-            return song
         if song.comments:
             return song
 
@@ -93,8 +92,8 @@ class BaseMusicPlayer(ABC):
                 url=f"https://music.163.com/weapi/v1/resource/hotcomments/R_SO_4_{song.id}?csrf_token=",
                 method="POST",
                 data={
-                    "params": self.config["enc_params"],
-                    "encSecKey": self.config["enc_sec_key"],
+                    "params": self.cfg.enc_params,
+                    "encSecKey": self.cfg.enc_sec_key,
                 },
             )
         except Exception as e:

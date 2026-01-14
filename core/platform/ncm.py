@@ -2,6 +2,7 @@ from typing import ClassVar
 
 from astrbot.api import logger
 
+from ..config import PluginConfig
 from ..model import Platform, Song
 from .base import BaseMusicPlayer
 
@@ -17,7 +18,7 @@ class NetEaseMusic(BaseMusicPlayer):
         keywords=["网易云", "网易点歌"],
     )
 
-    def __init__(self, config: dict):
+    def __init__(self, config: PluginConfig):
         super().__init__(config)
 
     async def fetch_songs(self, keyword: str, limit=5, extra=None) -> list[Song]:

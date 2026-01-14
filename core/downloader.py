@@ -7,18 +7,20 @@ import aiohttp
 
 from astrbot.api import logger
 
+from .config import PluginConfig
+
 
 class Downloader:
     """下载器"""
 
-    def __init__(self, config: dict, songs_dir: Path):
-        self.config = config
+    def __init__(self, config: PluginConfig, songs_dir: Path):
+        self.cfg = config
         self.songs_dir = songs_dir
         self.session = aiohttp.ClientSession()
 
 
     async def initialize(self):
-        if self.config["clear_cache"]:
+        if self.cfg.clear_cache:
             self._ensure_cache_dir()
 
     async def close(self):

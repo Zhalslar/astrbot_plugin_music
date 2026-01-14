@@ -12,6 +12,7 @@ from astrbot.core.utils.session_waiter import (
     session_waiter,
 )
 
+from .core.config import PluginConfig
 from .core.downloader import Downloader
 from .core.platform import BaseMusicPlayer
 from .core.playlist import Playlist
@@ -22,16 +23,12 @@ from .core.sender import MusicSender
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-        self.config = config
+        self.cfg = PluginConfig(config)
 
         self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
         self.data_dir = StarTools.get_data_dir()
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
-
-        self.song_limit: int = (
-            1 if "single" in config["select_mode"] else config["song_limit"]
-        )
 
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
@@ -40,10 +37,10 @@ class MusicPlugin(Star):
     async def initialize(self):
         """插件加载时会调用"""
         self._register_player()
-        self.downloader = Downloader(self.config, self.songs_dir)
+        self.downloader = Downloader(self.cfg, self.songs_dir)
         await self.downloader.initialize()
-        self.renderer = MusicRenderer(self.config, self.font_path)
-        self.sender = MusicSender(self.config, self.renderer, self.downloader)
+        self.renderer = MusicRenderer(self.cfg, self.font_path)
+        self.sender = MusicSender(self.cfg, self.renderer, self.downloader)
 
         # 歌单管理器
         self.playlist = Playlist(self.data_dir, limit=50)
@@ -60,7 +57,7 @@ class MusicPlugin(Star):
         self, name: str | None = None, word: str | None = None, default: bool = False
     ) -> BaseMusicPlayer | None:
         if default:
-            word = self.config["default_player_name"]
+            word = self.cfg.default_player_name
         for player in self.players:
             if name:
                 name_ = name.strip().lower()
@@ -77,7 +74,7 @@ class MusicPlugin(Star):
         """注册音乐播放器"""
         all_subclass = BaseMusicPlayer.get_all_subclass()
         for _cls in all_subclass:
-            player = _cls(self.config)
+            player = _cls(self.cfg)
             self.players.append(player)
             self.keywords.extend(player.platform.keywords)
         logger.debug(f"已注册触发词：{self.keywords}")
@@ -105,7 +102,7 @@ class MusicPlugin(Star):
         # 搜索歌曲
         logger.debug(f"正在通过{player.platform.display_name}搜索歌曲：{song_name}")
         songs = await player.fetch_songs(
-            keyword=song_name, limit=self.song_limit, extra=cmd
+            keyword=song_name, limit=self.cfg.song_limit, extra=cmd
         )
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")
