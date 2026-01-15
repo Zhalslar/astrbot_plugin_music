@@ -19,7 +19,7 @@
             "5sing翻唱",
             "全民K歌"
         ],
-        "default": "netease(网易云音乐)"
+        "default": "网易点歌"
     },
     "nodejs_base_url": {
         "description": "nodejs服务的api根地址",
