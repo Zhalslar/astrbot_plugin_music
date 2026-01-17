@@ -46,11 +46,12 @@ class TXQQMusic(BaseMusicPlayer):
             "百度",
             "一听",
             "咪咕",
-            "荔枝蜻蜓",
-            "喜马拉雅",
+            "荔枝",
+            "蜻蜓",
+            "喜马",
             "5sing原创",
             "5sing翻唱",
-            "全民K歌",
+            "全民",
         ],
     )
 
@@ -63,10 +64,10 @@ class TXQQMusic(BaseMusicPlayer):
         "migu": ["咪咕"],
         "lizhi": ["荔枝"],
         "qingting": ["蜻蜓"],
-        "ximalaya": ["喜马拉雅"],
+        "ximalaya": ["喜马"],
         "5singyc": ["5sing原创"],
         "5singfc": ["5sing翻唱"],
-        "kg": ["全民k歌"],
+        "kg": ["全民"],
     }
 
     BASE_URL = "https://music.txqq.pro/"

@@ -124,7 +124,7 @@ class MusicPlugin(Star):
                 self.sender.send_song_selection(event=event, songs=songs, title=title)
             )
 
-            @session_waiter(timeout=self.config["timeout"])  # type: ignore  # noqa: F821
+            @session_waiter(timeout=self.cfg.timeout)
             async def empty_mention_waiter(
                 controller: SessionController, event: AstrMessageEvent
             ):
