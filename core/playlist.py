@@ -3,7 +3,6 @@
 import asyncio
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 from astrbot.api import logger
 
@@ -26,7 +25,7 @@ class Playlist:
         self.db_path = data_dir / "playlist.db"
         self.limit = limit
 
-        self._conn: sqlite3.Connection | None = None
+        self._conn: sqlite3.Connection = None # type: ignore
         self._lock = asyncio.Lock()
 
     async def initialize(self):
@@ -66,7 +65,7 @@ class Playlist:
         async with self._lock:
             if self._conn:
                 self._conn.close()
-                self._conn = None
+                self._conn = None # type: ignore
 
     async def add_song(self, user_id: str, song: Song, platform: str) -> bool:
         """
@@ -81,7 +80,7 @@ class Playlist:
                 cursor = self._conn.cursor()
                 cursor.execute(
                     """
-                    INSERT INTO playlist 
+                    INSERT INTO playlist
                     (user_id, song_id, song_name, artists, duration, cover_url, audio_url, platform)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
@@ -120,7 +119,7 @@ class Playlist:
                 cursor = self._conn.cursor()
                 cursor.execute(
                     """
-                    DELETE FROM playlist 
+                    DELETE FROM playlist
                     WHERE user_id = ? AND song_id = ? AND platform = ?
                 """,
                     (user_id, song_id, platform),
@@ -138,7 +137,7 @@ class Playlist:
                 return False
 
     async def get_songs(
-        self, user_id: str, limit: Optional[int] = None
+        self, user_id: str, limit: int | None = None
     ) -> list[tuple[Song, str]]:
         """
         获取用户的歌单
