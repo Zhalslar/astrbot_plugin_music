@@ -2,30 +2,28 @@
 
 import asyncio
 import sqlite3
-from pathlib import Path
 
 from astrbot.api import logger
 
+from .config import PluginConfig
 from .model import Song
 
 
 class Playlist:
     """歌单管理类，封装歌单的所有操作"""
 
-    def __init__(self, data_dir: Path, limit: int = 50):
+    def __init__(self, config: PluginConfig):
         """
         初始化歌单管理器
         :param data_dir: 数据目录路径
         :param limit: 歌单显示数量限制
         """
-        self.data_dir = data_dir
-        self.playlist_dir = data_dir / "playlist"
-        self.playlist_dir.mkdir(parents=True, exist_ok=True)
+        self.cfg = config
+        self.playlist_dir = self.cfg.playlist_dir
+        self.db_path = self.cfg.db_path
+        self.limit = self.cfg.playlist_limit
 
-        self.db_path = data_dir / "playlist.db"
-        self.limit = limit
-
-        self._conn: sqlite3.Connection = None # type: ignore
+        self._conn: sqlite3.Connection = None  # type: ignore
         self._lock = asyncio.Lock()
 
     async def initialize(self):
@@ -65,7 +63,7 @@ class Playlist:
         async with self._lock:
             if self._conn:
                 self._conn.close()
-                self._conn = None # type: ignore
+                self._conn = None  # type: ignore
 
     async def add_song(self, user_id: str, song: Song, platform: str) -> bool:
         """

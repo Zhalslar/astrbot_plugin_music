@@ -1,71 +1,110 @@
 # typed_config.py
 from __future__ import annotations
 
-from typing import Any, get_type_hints
+from collections.abc import Mapping, MutableMapping
+from pathlib import Path
+from types import MappingProxyType, UnionType
+from typing import Any, Union, get_args, get_origin, get_type_hints
 
+from astrbot.api import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
+from astrbot.core.star.context import Context
+from astrbot.core.star.star_tools import StarTools
+from astrbot.core.utils.astrbot_path import get_astrbot_plugin_path
 
 
-class TypedConfigFacade:
+class ConfigNode:
     """
-    AstrBotConfig 的强类型属性 Facade
-    - 不继承
-    - 不复制
-    - 单一真实状态源
+    配置节点, 把 dict 变成强类型对象。
+
+    规则：
+    - schema 来自子类类型注解
+    - 声明字段：读写，写回底层 dict
+    - 未声明字段和下划线字段：仅挂载属性，不写回
+    - 支持 ConfigNode 多层嵌套（lazy + cache）
     """
 
-    __annotations__: dict[str, type]
+    _SCHEMA_CACHE: dict[type, dict[str, type]] = {}
+    _FIELDS_CACHE: dict[type, set[str]] = {}
 
-    def __init__(self, cfg: AstrBotConfig):
-        object.__setattr__(self, "_cfg", cfg)
+    @classmethod
+    def _schema(cls) -> dict[str, type]:
+        return cls._SCHEMA_CACHE.setdefault(cls, get_type_hints(cls))
 
-        hints = get_type_hints(self.__class__)
-        fields = {k: v for k, v in hints.items() if not k.startswith("__")}
-        object.__setattr__(self, "_fields", fields)
+    @classmethod
+    def _fields(cls) -> set[str]:
+        return cls._FIELDS_CACHE.setdefault(
+            cls,
+            {k for k in cls._schema() if not k.startswith("_")},
+        )
 
-        # ===== 必填字段校验 =====
-        for key in fields:
-            if key not in cfg:
-                raise KeyError(f"缺少必填配置键: {key}")
+    @staticmethod
+    def _is_optional(tp: type) -> bool:
+        if get_origin(tp) in (Union, UnionType):
+            return type(None) in get_args(tp)
+        return False
 
-        self._preprocess()
+    def __init__(self, data: MutableMapping[str, Any]):
+        object.__setattr__(self, "_data", data)
+        object.__setattr__(self, "_children", {})
+        for key, tp in self._schema().items():
+            if key.startswith("_"):
+                continue
+            if key in data:
+                continue
+            if hasattr(self.__class__, key):
+                continue
+            if self._is_optional(tp):
+                continue
+            logger.warning(f"[config:{self.__class__.__name__}] 缺少字段: {key}")
 
-    # ---------- dict 行为代理 ----------
-    def __getitem__(self, key: str) -> Any:
-        return self._cfg[key]
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        self._cfg[key] = value
-
-    def __contains__(self, key: str) -> bool:
-        return key in self._cfg
-
-    # ---------- 属性访问 ----------
     def __getattr__(self, key: str) -> Any:
-        hints = self.__class__.__annotations__
-        if key in hints:
-            return self._cfg[key]
-        return getattr(self._cfg, key)
+        if key in self._fields():
+            value = self._data.get(key)
+            tp = self._schema().get(key)
+
+            if isinstance(tp, type) and issubclass(tp, ConfigNode):
+                children: dict[str, ConfigNode] = self.__dict__["_children"]
+                if key not in children:
+                    if not isinstance(value, MutableMapping):
+                        raise TypeError(
+                            f"[config:{self.__class__.__name__}] "
+                            f"字段 {key} 期望 dict，实际是 {type(value).__name__}"
+                        )
+                    children[key] = tp(value)
+                return children[key]
+
+            return value
+
+        if key in self.__dict__:
+            return self.__dict__[key]
+
+        raise AttributeError(key)
 
     def __setattr__(self, key: str, value: Any) -> None:
-        hints = self.__class__.__annotations__
-        if key in hints:
-            self._cfg[key] = value
-        else:
-            setattr(self._cfg, key, value)
+        if key in self._fields():
+            self._data[key] = value
+            return
+        object.__setattr__(self, key, value)
 
-    # ---------- 生命周期钩子 ----------
-    def _preprocess(self) -> None:
-        """对配置进行预处理（子类可覆盖）"""
-        pass
+    def raw_data(self) -> Mapping[str, Any]:
+        """
+        底层配置 dict 的只读视图
+        """
+        return MappingProxyType(self._data)
 
-    # ---------- 保存 ----------
-    def save(self) -> None:
-        self._cfg.save_config()
+    def save_config(self) -> None:
+        """
+        保存配置到磁盘（仅允许在根节点调用）
+        """
+        if not isinstance(self._data, AstrBotConfig):
+            raise RuntimeError(
+                f"{self.__class__.__name__}.save_config() 只能在根配置节点上调用"
+            )
+        self._data.save_config()
 
 
-
-class PluginConfig(TypedConfigFacade):
+class PluginConfig(ConfigNode):
     default_player_name: str
     nodejs_base_url: str
     song_limit: int
@@ -79,9 +118,30 @@ class PluginConfig(TypedConfigFacade):
     clear_cache: bool
     enc_sec_key: str
     enc_params: str
+    playlist_limit: int
 
-    def _preprocess(self) -> None:
-        self.send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
-        self.song_limit: int = (
-            1 if "single" in self.select_mode else self.song_limit
-        )
+    def __init__(self, config: AstrBotConfig, context: Context):
+        super().__init__(config)
+        self.context = context
+
+        self.font_path = Path(get_astrbot_plugin_path()) / "fonts" / "simhei.ttf"
+        self.data_dir = StarTools.get_data_dir("astrbot_plugin_music")
+        self.songs_dir = self.data_dir / "songs"
+        self.songs_dir.mkdir(parents=True, exist_ok=True)
+        self.playlist_dir = self.data_dir / "playlist"
+        self.playlist_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = self.data_dir / "playlist.db"
+
+        self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
+
+    @property
+    def http_proxy(self) -> str | None:
+        return self.proxy or None
+
+    @property
+    def real_send_modes(self) -> list[str]:
+        return self._send_modes
+
+    @property
+    def real_song_limit(self) -> int:
+        return 1 if "single" in self.select_mode else self.song_limit

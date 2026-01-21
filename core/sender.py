@@ -24,9 +24,6 @@ class MusicSender:
         self.cfg = config
         self.renderer = renderer
         self.downloader = downloader
-        self.send_modes = [
-            mode.split("(", 1)[0].strip() for mode in config["send_modes"]
-        ]
 
     @staticmethod
     def _format_time(duration_ms):
@@ -230,7 +227,7 @@ class MusicSender:
 
         sent = False
 
-        for mode in self.send_modes:
+        for mode in self.cfg.real_send_modes:
             if not self._is_mode_supported(mode, event, player):
                 logger.debug(f"{mode} 不支持，跳过")
                 continue

@@ -1,12 +1,10 @@
 import asyncio
 import traceback
-from pathlib import Path
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 from astrbot.core.config.astrbot_config import AstrBotConfig
-from astrbot.core.star.star_tools import StarTools
 from astrbot.core.utils.session_waiter import (
     SessionController,
     session_waiter,
@@ -23,13 +21,7 @@ from .core.sender import MusicSender
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
-        self.cfg = PluginConfig(config)
-
-        self.font_path = Path(__file__).parent / "fonts" / "simhei.ttf"
-        self.data_dir = StarTools.get_data_dir()
-        self.songs_dir = self.data_dir / "songs"
-        self.songs_dir.mkdir(parents=True, exist_ok=True)
-
+        self.cfg = PluginConfig(config, context)
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
 
@@ -37,13 +29,13 @@ class MusicPlugin(Star):
     async def initialize(self):
         """插件加载时会调用"""
         self._register_player()
-        self.downloader = Downloader(self.cfg, self.songs_dir)
+        self.downloader = Downloader(self.cfg)
         await self.downloader.initialize()
-        self.renderer = MusicRenderer(self.cfg, self.font_path)
+        self.renderer = MusicRenderer(self.cfg)
         self.sender = MusicSender(self.cfg, self.renderer, self.downloader)
 
         # 歌单管理器
-        self.playlist = Playlist(self.data_dir, limit=50)
+        self.playlist = Playlist(self.cfg)
         await self.playlist.initialize()
 
     async def terminate(self):
@@ -102,7 +94,7 @@ class MusicPlugin(Star):
         # 搜索歌曲
         logger.debug(f"正在通过{player.platform.display_name}搜索歌曲：{song_name}")
         songs = await player.fetch_songs(
-            keyword=song_name, limit=self.cfg.song_limit, extra=cmd
+            keyword=song_name, limit=self.cfg.real_song_limit, extra=cmd
         )
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")

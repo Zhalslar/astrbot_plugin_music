@@ -13,10 +13,10 @@ from .config import PluginConfig
 class Downloader:
     """下载器"""
 
-    def __init__(self, config: PluginConfig, songs_dir: Path):
+    def __init__(self, config: PluginConfig):
         self.cfg = config
-        self.songs_dir = songs_dir
-        self.session = aiohttp.ClientSession()
+        self.songs_dir = self.cfg.songs_dir
+        self.session = aiohttp.ClientSession(proxy=self.cfg.http_proxy)
 
 
     async def initialize(self):
