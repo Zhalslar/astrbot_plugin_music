@@ -1,7 +1,6 @@
 
 import io
 import re
-from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -9,9 +8,9 @@ from .config import PluginConfig
 
 
 class MusicRenderer:
-    def __init__(self, config: PluginConfig, font_path: Path):
+    def __init__(self, config: PluginConfig):
         self.cfg = config
-        self.font_path = font_path
+        self.font_path = config.font_path
 
     def draw_lyrics(
         self,

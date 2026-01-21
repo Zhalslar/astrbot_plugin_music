@@ -106,6 +106,18 @@
         "type": "bool",
         "default": true
     },
+    "playlist_limit": {
+        "description": "歌单容量限制",
+        "hint": "决定了用户的歌单最多能添加多少首歌",
+        "type": "int",
+        "slider": {
+            "min": 10,
+            "max": 200,
+            "step": 1
+        },
+        "default": 100
+        
+    },
     "enc_sec_key": {
         "description": "网易云野生密钥",
         "hint": "",
