@@ -123,9 +123,6 @@ class PluginConfig(ConfigNode):
     def __init__(self, config: AstrBotConfig, context: Context):
         super().__init__(config)
         self.context = context
-        self._proxy = self.proxy or None
-        self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
-        self._song_limit: int = 1 if "single" in self.select_mode else self.song_limit
 
         self.font_path = Path(get_astrbot_plugin_path()) / "fonts" / "simhei.ttf"
         self.data_dir = StarTools.get_data_dir("astrbot_plugin_music")
@@ -134,3 +131,17 @@ class PluginConfig(ConfigNode):
         self.playlist_dir = self.data_dir / "playlist"
         self.playlist_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.data_dir / "playlist.db"
+
+        self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
+
+    @property
+    def http_proxy(self) -> str | None:
+        return self.proxy or None
+
+    @property
+    def real_send_modes(self) -> list[str]:
+        return self._send_modes
+
+    @property
+    def real_song_limit(self) -> int:
+        return 1 if "single" in self.select_mode else self.song_limit

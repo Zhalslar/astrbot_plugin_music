@@ -35,7 +35,7 @@ class BaseMusicPlayer(ABC):
 
     def __init__(self, config: PluginConfig):
         self.cfg = config
-        self.session = aiohttp.ClientSession(proxy=self.cfg._proxy)
+        self.session = aiohttp.ClientSession(proxy=self.cfg.http_proxy)
 
     def __init_subclass__(cls, **kwargs):
         """自动注册子类到 _registry"""

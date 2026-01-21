@@ -227,7 +227,7 @@ class MusicSender:
 
         sent = False
 
-        for mode in self.cfg._send_modes:
+        for mode in self.cfg.real_send_modes:
             if not self._is_mode_supported(mode, event, player):
                 logger.debug(f"{mode} 不支持，跳过")
                 continue

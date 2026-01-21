@@ -16,7 +16,7 @@ class Downloader:
     def __init__(self, config: PluginConfig):
         self.cfg = config
         self.songs_dir = self.cfg.songs_dir
-        self.session = aiohttp.ClientSession()
+        self.session = aiohttp.ClientSession(proxy=self.cfg.http_proxy)
 
 
     async def initialize(self):

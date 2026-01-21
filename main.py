@@ -94,7 +94,7 @@ class MusicPlugin(Star):
         # 搜索歌曲
         logger.debug(f"正在通过{player.platform.display_name}搜索歌曲：{song_name}")
         songs = await player.fetch_songs(
-            keyword=song_name, limit=self.cfg.song_limit, extra=cmd
+            keyword=song_name, limit=self.cfg.real_song_limit, extra=cmd
         )
         if not songs:
             yield event.plain_result(f"搜索【{song_name}】无结果")
