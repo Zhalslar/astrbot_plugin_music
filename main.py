@@ -1,5 +1,6 @@
 import asyncio
 import traceback
+from enum import IntEnum
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -18,13 +19,27 @@ from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
 
 
+class SendMode(IntEnum):
+    """歌曲发送模式"""
+
+    CARD = 1
+    RECORD = 2
+    FILE = 3
+    TEXT = 4
+
+
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.cfg = PluginConfig(config, context)
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
-
+        self.mode_map = {
+            SendMode.CARD: ["card"],
+            SendMode.RECORD: ["record"],
+            SendMode.FILE: ["file"],
+            SendMode.TEXT: ["text"],
+        }
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -120,19 +135,37 @@ class MusicPlugin(Star):
             async def empty_mention_waiter(
                 controller: SessionController, event: AstrMessageEvent
             ):
-                arg = event.message_str.partition(" ")[0]
-                arg_ = arg.strip().lower()
+                arg = event.message_str.strip()
+                arg_lower = arg.lower()
                 for kw in self.keywords:
-                    if kw in arg_:
+                    if kw in arg_lower:
                         controller.stop()
                         return
-                if not arg.isdigit():
-                    return
-                if int(arg) < 1 or int(arg) > len(songs):
+                # ========== 新增：解析输入格式 ==========
+                parts = arg.split()
+
+                # 情况1: 单个数字 "2"
+                if len(parts) == 1 and parts[0].isdigit():
+                    index = int(parts[0])
+                    way = None  # 默认模式
+
+                # 情况2: "数字 数字" 格式 "1 2"（序号 模式）
+                elif len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    index = int(parts[0])
+                    way = SendMode(int(parts[1]))  # 转为枚举类型
+                else:
+                    return  # 无效格式，继续等待
+
+                # 验证索引范围
+                if index < 1 or index > len(songs):
                     controller.stop()
                     return
-                selected_song = songs[int(arg) - 1]
-                await self.sender.send_song(event, player, selected_song)
+
+                # 获取选中的歌曲
+                selected_song = songs[index - 1]
+                # 获取对应模式
+                modes = self.mode_map.get(way) if way else None
+                await self.sender.send_song(event, player, selected_song, modes=modes)
                 controller.stop()
 
             try:
