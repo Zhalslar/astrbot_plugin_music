@@ -188,7 +188,6 @@ class MusicPlugin(Star):
                             )
                             return  # 继续等待用户输入
                 else:
-                    await event.send(event.plain_result("无效格式，请重新输入"))
                     return
 
                 # 验证索引范围
