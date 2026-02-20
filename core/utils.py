@@ -23,7 +23,7 @@ MODE_MAP_CN: dict[str, SendMode] = {
 }
 
 
-def parse_user_input(arg: str) -> tuple[int, SendMode | None, str | None]:
+def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
     """解析用户选歌输入格式。
 
     支持的格式:
@@ -41,6 +41,13 @@ def parse_user_input(arg: str) -> tuple[int, SendMode | None, str | None]:
     parts = arg.split()
     index = 0
     way = None
+    modes = None
+    mode_map = {
+        SendMode.CARD: ["card"],
+        SendMode.RECORD: ["record"],
+        SendMode.FILE: ["file"],
+        SendMode.TEXT: ["text"],
+    }
 
     # 情况1: 单个数字 "2"
     if len(parts) == 1 and parts[0].isdigit():
@@ -67,5 +74,5 @@ def parse_user_input(arg: str) -> tuple[int, SendMode | None, str | None]:
                     None,
                     f"未知模式「{second_part}」，可用模式：卡片/语音/文件/文本 或 1/2/3/4",
                 )
-
-    return index, way, None
+    modes = mode_map.get(way) if way else None
+    return index, modes, None

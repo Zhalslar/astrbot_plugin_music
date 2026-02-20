@@ -16,7 +16,7 @@ from .core.platform import BaseMusicPlayer
 from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
-from .core.utils import SendMode, parse_user_input
+from .core.utils import parse_user_input
 
 
 class MusicPlugin(Star):
@@ -25,12 +25,6 @@ class MusicPlugin(Star):
         self.cfg = PluginConfig(config, context)
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
-        self.mode_map = {
-            SendMode.CARD: ["card"],
-            SendMode.RECORD: ["record"],
-            SendMode.FILE: ["file"],
-            SendMode.TEXT: ["text"],
-        }
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -133,22 +127,16 @@ class MusicPlugin(Star):
                         controller.stop()
                         return
                 # 解析输入格式
-                index, way, error = parse_user_input(arg)
+                index, modes, error = parse_user_input(arg)
                 if error:
                     await event.send(event.plain_result(error))
-                    return  # 继续等待用户输入
+                    return
                 if index == 0:
                     return
-
-                # 验证索引范围
                 if index < 1 or index > len(songs):
                     controller.stop()
                     return
-
-                # 获取选中的歌曲
                 selected_song = songs[index - 1]
-                # 获取对应模式
-                modes = self.mode_map.get(way) if way else None
                 await self.sender.send_song(event, player, selected_song, modes=modes)
                 controller.stop()
 
