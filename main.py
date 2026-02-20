@@ -1,6 +1,5 @@
 import asyncio
 import traceback
-from enum import IntEnum
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent, filter
@@ -17,15 +16,7 @@ from .core.platform import BaseMusicPlayer
 from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
-
-
-class SendMode(IntEnum):
-    """歌曲发送模式"""
-
-    CARD = 1
-    RECORD = 2
-    FILE = 3
-    TEXT = 4
+from .core.utils import SendMode, parse_user_input
 
 
 class MusicPlugin(Star):
@@ -141,53 +132,12 @@ class MusicPlugin(Star):
                     if kw in arg_lower:
                         controller.stop()
                         return
-                # ========== 新增：解析输入格式 ==========
-                parts = arg.split()
-                index = 0
-                way = None
-                # 情况1: 单个数字 "2"
-                if len(parts) == 1 and parts[0].isdigit():
-                    index = int(parts[0])
-
-                # 情况2: "数字 模式" 格式 "1 2"（数字 数字）
-                elif len(parts) == 2 and parts[0].isdigit():
-                    index = int(parts[0])
-                    second_part = parts[1]
-
-                    # 尝试解析为数字
-                    if second_part.isdigit():
-                        mode_value = int(second_part)
-                        if 1 <= mode_value <= 4:
-                            way = SendMode(mode_value)
-                        else:
-                            await event.send(
-                                event.plain_result(
-                                    "模式数字应为 1-4：1卡片 2语音 3文件 4文本"
-                                )
-                            )
-                            return  # 继续等待用户输入
-                    else:
-                        # 尝试匹配文本模式
-                        mode_map_cn = {
-                            "卡片": SendMode.CARD,
-                            "语音": SendMode.RECORD,
-                            "文件": SendMode.FILE,
-                            "文本": SendMode.TEXT,
-                            "card": SendMode.CARD,
-                            "record": SendMode.RECORD,
-                            "file": SendMode.FILE,
-                            "text": SendMode.TEXT,
-                        }
-                        way = mode_map_cn.get(second_part)
-                        # 如果匹配失败，提示错误但不停止会话
-                        if way is None:
-                            await event.send(
-                                event.plain_result(
-                                    f"未知模式「{second_part}」，可用模式：卡片/语音/文件/文本 或 1/2/3/4"
-                                )
-                            )
-                            return  # 继续等待用户输入
-                else:
+                # 解析输入格式
+                index, way, error = parse_user_input(arg)
+                if error:
+                    await event.send(event.plain_result(error))
+                    return  # 继续等待用户输入
+                if index == 0:
                     return
 
                 # 验证索引范围
