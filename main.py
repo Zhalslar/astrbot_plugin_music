@@ -16,6 +16,7 @@ from .core.platform import BaseMusicPlayer
 from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
+from .core.utils import parse_user_input
 
 
 class MusicPlugin(Star):
@@ -24,7 +25,6 @@ class MusicPlugin(Star):
         self.cfg = PluginConfig(config, context)
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
-
 
     async def initialize(self):
         """插件加载时会调用"""
@@ -120,23 +120,28 @@ class MusicPlugin(Star):
             async def empty_mention_waiter(
                 controller: SessionController, event: AstrMessageEvent
             ):
-                arg = event.message_str.partition(" ")[0]
-                arg_ = arg.strip().lower()
+                arg = event.message_str.strip()
+                arg_lower = arg.lower()
                 for kw in self.keywords:
-                    if kw in arg_:
+                    if kw in arg_lower:
                         controller.stop()
                         return
-                if not arg.isdigit():
+                # 解析输入格式
+                index, modes, error = parse_user_input(arg)
+                if error:
+                    await event.send(event.plain_result(error))
                     return
-                if int(arg) < 1 or int(arg) > len(songs):
+                if index == 0:
+                    return
+                if index < 1 or index > len(songs):
                     controller.stop()
                     return
-                selected_song = songs[int(arg) - 1]
-                await self.sender.send_song(event, player, selected_song)
+                selected_song = songs[index - 1]
+                await self.sender.send_song(event, player, selected_song, modes=modes)
                 controller.stop()
 
             try:
-                await empty_mention_waiter(event)  # type: ignore
+                await empty_mention_waiter(event)
             except TimeoutError as _:
                 yield event.plain_result("点歌超时！")
             except Exception as e:

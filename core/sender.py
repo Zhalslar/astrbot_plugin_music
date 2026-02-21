@@ -1,4 +1,3 @@
-
 import asyncio
 import random
 
@@ -48,6 +47,7 @@ class MusicSender:
             payloads["group_id"] = event.get_group_id()
             result = await event.bot.api.call_action("send_group_msg", **payloads)
         return result.get("message_id")
+
     async def send_song_selection(
         self, event: AstrMessageEvent, songs: list[Song], title: str | None = None
     ) -> None:
@@ -103,6 +103,7 @@ class MusicSender:
         except Exception as e:
             logger.error(f"【{song.name}】歌词渲染/发送失败: {e}")
             return False
+
     async def send_card(
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
@@ -155,16 +156,40 @@ class MusicSender:
             return False
 
         file_path = await self.downloader.download_song(song.audio_url)
+
+        async def send_by_url():
+            try:
+                # 默认使用 mp3 后缀
+                file_name_url = f"{song.name}_{song.artists}.mp3"
+                seg_url = File(name=file_name_url, url=song.audio_url)
+                await event.send(event.chain_result([seg_url]))
+                return True
+            except Exception as e_url:
+                logger.error(f"URL 发送失败: {e_url}")
+                return False
+
         if not file_path:
-            await event.send(event.plain_result(f"【{song.name}】音频文件下载失败"))
+            logger.warning(f"【{song.name}】下载失败，尝试直接发送 URL")
+            if await send_by_url():
+                return True
+            await event.send(
+                event.plain_result(f"【{song.name}】音频文件下载和发送均失败")
+            )
             return False
+
         try:
             file_name = f"{song.name}_{song.artists}{file_path.suffix}"
-            seg = File(name=file_name, file=str(file_path))
+            seg = File(name=file_name, file=str(file_path.resolve()))
             await event.send(event.chain_result([seg]))
             return True
         except Exception as e:
-            await event.send(event.plain_result(f"【{song.name}】音频文件发送失败: {e}"))
+            logger.warning(f"【{song.name}】本地文件发送失败: {e}，尝试直接发送 URL")
+            if await send_by_url():
+                return True
+
+            await event.send(
+                event.plain_result(f"【{song.name}】音频文件发送失败: {e}")
+            )
             return False
 
     async def send_text(
@@ -219,15 +244,22 @@ class MusicSender:
 
         return False
 
-    async def send_song(self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song):
+    async def send_song(
+        self,
+        event: AstrMessageEvent,
+        player: BaseMusicPlayer,
+        song: Song,
+        modes: list[str] | None = None,
+    ):
         logger.debug(
             f"{event.get_sender_name()}（{event.get_sender_id()}）点歌："
             f"{player.platform.display_name} -> {song.name}_{song.artists}"
         )
 
         sent = False
+        target_modes = modes if modes is not None else self.cfg.real_send_modes
 
-        for mode in self.cfg.real_send_modes:
+        for mode in target_modes:
             if not self._is_mode_supported(mode, event, player):
                 logger.debug(f"{mode} 不支持，跳过")
                 continue
