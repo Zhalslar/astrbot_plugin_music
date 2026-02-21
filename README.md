@@ -205,8 +205,3 @@ _🎵 高性能多平台点歌插件 🎵_
 
 - 想第一时间得到反馈的可以来作者的插件反馈群（QQ群）：460973561（不点star不给进）
 
-## ❤️ Contributors
-
-<a href="https://github.com/Zhalslar/astrbot_plugin_music/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=Zhalslar/astrbot_plugin_music" />
-</a>
