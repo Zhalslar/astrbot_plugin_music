@@ -124,7 +124,7 @@ class PluginConfig(ConfigNode):
         super().__init__(config)
         self.context = context
 
-        self.font_path = Path(get_astrbot_plugin_path()) / "fonts" / "simhei.ttf"
+        self.font_path = Path(get_astrbot_plugin_path()) / "astrbot_plugin_music" / "fonts" / "simhei.ttf"
         self.data_dir = StarTools.get_data_dir("astrbot_plugin_music")
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
