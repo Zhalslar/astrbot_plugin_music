@@ -234,6 +234,7 @@ class MusicSender:
                 "satori",
                 "telegram",
                 "webchat",
+                "wecom",
             }
 
         if mode == "file":
