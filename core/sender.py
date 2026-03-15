@@ -161,9 +161,10 @@ class MusicSender:
             try:
                 # 默认使用 mp3 后缀
                 file_name_url = f"{song.name}_{song.artists}.mp3"
-                seg_url = File(name=file_name_url, url=song.audio_url)
-                await event.send(event.chain_result([seg_url]))
-                return True
+                if song.audio_url:
+                    seg_url = File(name=file_name_url, url=song.audio_url)
+                    await event.send(event.chain_result([seg_url]))
+                    return True
             except Exception as e_url:
                 logger.error(f"URL 发送失败: {e_url}")
                 return False
@@ -214,30 +215,41 @@ class MusicSender:
             "text": self.send_text,
         }.get(mode)
 
-    def _is_mode_supported(self, mode: str, event, player) -> bool:
+    def _is_mode_supported(
+        self, mode: str, event: AstrMessageEvent, player: BaseMusicPlayer
+    ) -> bool:
+        platform = event.get_platform_name()
         if mode == "card":
-            return isinstance(event, AiocqhttpMessageEvent) and isinstance(
+            return platform == "aiocqhttp" and isinstance(
                 player, NetEaseMusic | NetEaseMusicNodeJS
             )
-        # 延迟导入，防止初始化卡顿
-        from astrbot.core.platform.sources.discord.discord_platform_event import (
-            DiscordViewComponent,
-        )
-        from astrbot.core.platform.sources.telegram.tg_event import (
-            TelegramPlatformEvent,
-        )
-
         if mode == "record":
-            return isinstance(
-                event,
-                AiocqhttpMessageEvent | TelegramPlatformEvent,
-            )
+            return platform in {
+                "aiocqhttp",
+                "dingtalk",
+                "lark",
+                "line",
+                "qq_official",
+                "qq_official_webhook",
+                "satori",
+                "telegram",
+                "webchat",
+            }
 
         if mode == "file":
-            return isinstance(
-                event,
-                AiocqhttpMessageEvent | TelegramPlatformEvent | DiscordViewComponent,
-            )
+            return platform in {
+                "aiocqhttp",
+                "discord",
+                "dingtalk",
+                "lark",
+                "line",
+                "misskey",
+                "qq_official",
+                "qq_official_webhook",
+                "satori",
+                "telegram",
+                "webchat",
+            }
 
         if mode == "text":
             return True
