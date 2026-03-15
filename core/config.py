@@ -9,8 +9,7 @@ from typing import Any, Union, get_args, get_origin, get_type_hints
 from astrbot.api import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.star.context import Context
-from astrbot.core.star.star_tools import StarTools
-from astrbot.core.utils.astrbot_path import get_astrbot_plugin_path
+from astrbot.core.utils.astrbot_path import get_astrbot_plugin_data_path, get_astrbot_plugin_path
 
 
 class ConfigNode:
@@ -119,13 +118,17 @@ class PluginConfig(ConfigNode):
     enc_sec_key: str
     enc_params: str
     playlist_limit: int
+    
+    _plugin_name: str = "astrbot_plugin_music"
 
     def __init__(self, config: AstrBotConfig, context: Context):
         super().__init__(config)
         self.context = context
 
-        self.font_path = Path(get_astrbot_plugin_path()) / "fonts" / "simhei.ttf"
-        self.data_dir = StarTools.get_data_dir("astrbot_plugin_music")
+        self.font_path = (
+            Path(get_astrbot_plugin_path()) / self._plugin_name / "fonts" / "simhei.ttf"
+        )
+        self.data_dir = Path(get_astrbot_plugin_data_path()) / self._plugin_name
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
         self.playlist_dir = self.data_dir / "playlist"
