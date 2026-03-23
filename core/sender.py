@@ -250,6 +250,7 @@ class MusicSender:
                 "satori",
                 "telegram",
                 "webchat",
+                "weixin_oc",
             }
 
         if mode == "text":
