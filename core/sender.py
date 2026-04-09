@@ -219,44 +219,19 @@ class MusicSender:
         self, mode: str, event: AstrMessageEvent, player: BaseMusicPlayer
     ) -> bool:
         platform = event.get_platform_name()
-        if mode == "card":
-            return platform == "aiocqhttp" and isinstance(
-                player, NetEaseMusic | NetEaseMusicNodeJS
-            )
-        if mode == "record":
-            return platform in {
-                "aiocqhttp",
-                "dingtalk",
-                "lark",
-                "line",
-                "qq_official",
-                "qq_official_webhook",
-                "satori",
-                "telegram",
-                "webchat",
-                "wecom",
-            }
-
-        if mode == "file":
-            return platform in {
-                "aiocqhttp",
-                "discord",
-                "dingtalk",
-                "lark",
-                "line",
-                "misskey",
-                "qq_official",
-                "qq_official_webhook",
-                "satori",
-                "telegram",
-                "webchat",
-                "weixin_oc",
-            }
-
-        if mode == "text":
-            return True
-
-        return False
+        match mode:
+            case "text":
+                return True
+            case "card":
+                return platform == "aiocqhttp" and isinstance(
+                    player, (NetEaseMusic, NetEaseMusicNodeJS)
+                )
+            case "record":
+                return platform in self.cfg.record_supported
+            case "file":
+                return platform in self.cfg.file_supported
+            case _:
+                return False
 
     async def send_song(
         self,
