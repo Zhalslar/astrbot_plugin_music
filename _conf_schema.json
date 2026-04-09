@@ -43,10 +43,14 @@
         "hint": "此配置决定搜索歌曲的展示方法。单曲模式默认选取第一首歌曲",
         "type": "string",
         "options": [
-            "text(文本模式)",
-            "single(单曲模式)"
+            "text",
+            "single"
         ],
-        "default": "text(文本模式)"
+        "labels": [
+            "文本模式",
+            "单曲模式"
+        ],
+        "default": "text"
     },
     "send_modes": {
         "description": "发送模式",
@@ -63,6 +67,76 @@
             "record(语音模式)",
             "file(文件模式)",
             "text(文本模式)"
+        ]
+    },
+    "record_supported": {
+        "description": "支持发语音的消息平台",
+        "hint": "此配置定义哪些消息平台支持发送语音消息，不支持的平台发送歌曲时将不采用语音模式",
+        "type": "list",
+        "options": [
+            "aiocqhttp",
+            "dingtalk",
+            "discord",
+            "kook",
+            "lark",
+            "line",
+            "misskey",
+            "qq_official",
+            "qq_official_webhook",
+            "satori",
+            "telegram",
+            "webchat",
+            "wecom",
+            "wecom_ai_bot",
+            "weixin_oc"
+        ],
+        "default": [
+            "aiocqhttp",
+            "dingtalk",
+            "lark",
+            "line",
+            "qq_official",
+            "qq_official_webhook",
+            "satori",
+            "telegram",
+            "webchat",
+            "wecom"
+        ]
+    },
+    "file_supported": {
+        "description": "支持发文件的消息平台",
+        "hint": "此配置定义哪些消息平台支持发送文件消息，不支持的平台发送歌曲时将不采用文件模式",
+        "type": "list",
+        "options": [
+            "aiocqhttp",
+            "dingtalk",
+            "discord",
+            "kook",
+            "lark",
+            "line",
+            "misskey",
+            "qq_official",
+            "qq_official_webhook",
+            "satori",
+            "telegram",
+            "webchat",
+            "wecom",
+            "wecom_ai_bot",
+            "weixin_oc"
+        ],
+        "default": [
+            "aiocqhttp",
+            "discord",
+            "dingtalk",
+            "lark",
+            "line",
+            "misskey",
+            "qq_official",
+            "qq_official_webhook",
+            "satori",
+            "telegram",
+            "webchat",
+            "weixin_oc"
         ]
     },
     "enable_comments": {
@@ -94,7 +168,7 @@
         },
         "default": 30
     },
-    "timeout_recall": { 
+    "timeout_recall": {
         "description": "撤回选歌消息",
         "hint": "达到超时时长后，撤回之前发送的选歌消息 (仅 aiocqhttp 平台支持)",
         "type": "bool",
@@ -116,7 +190,6 @@
             "step": 1
         },
         "default": 100
-        
     },
     "enc_sec_key": {
         "description": "网易云野生密钥",
