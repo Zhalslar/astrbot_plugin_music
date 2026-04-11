@@ -75,9 +75,6 @@ class BaseMusicPlayer(ABC):
                 song.audio_url = data.get("url")
             if not song.cover_url:
                 song.cover_url = data.get("pic")
-            # 不应该将获取到的 lrc url 赋值给 lyrics，因为 lyrics 需要具体的歌词文本
-            # if not song.lyrics:
-            #     song.lyrics = data.get("lrc")
         return song
 
     async def fetch_comments(self, song: Song) -> Song:
