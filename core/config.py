@@ -109,6 +109,8 @@ class ConfigNode:
 class PluginConfig(ConfigNode):
     default_player_name: str
     nodejs_base_url: str
+    spotify_client_id: str
+    spotify_client_secret: str
     song_limit: int
     select_mode: str
     send_modes: list[str]

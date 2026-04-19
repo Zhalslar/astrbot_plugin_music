@@ -6,6 +6,7 @@
         "options": [
             "网易点歌",
             "nj点歌",
+            "Spotify点歌",
             "QQ点歌",
             "酷狗点歌",
             "酷我点歌",
@@ -26,6 +27,19 @@
         "hint": "此项配置决定nodejs服务api的根地址，命令 “nj点歌” 使用的是网易云nodejs服务",
         "type": "string",
         "default": "https://163api.qijieya.cn"
+    },
+    "spotify_client_id": {
+        "description": "Spotify Client ID",
+        "hint": "用于调用 Spotify Web API 的应用 Client ID。留空则无法使用 Spotify 点歌。",
+        "type": "string",
+        "default": ""
+    },
+    "spotify_client_secret": {
+        "description": "Spotify Client Secret",
+        "hint": "用于调用 Spotify Web API 的应用 Client Secret。留空则无法使用 Spotify 点歌。",
+        "type": "string",
+        "invisible": true,
+        "default": ""
     },
     "song_limit": {
         "description": "搜索歌曲数量限制",

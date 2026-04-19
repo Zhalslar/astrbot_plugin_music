@@ -12,7 +12,7 @@ from astrbot.core.utils.session_waiter import (
 
 from .core.config import PluginConfig
 from .core.downloader import Downloader
-from .core.platform import BaseMusicPlayer
+from .core.platform import BaseMusicPlayer, SpotifyMusic
 from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
@@ -71,9 +71,15 @@ class MusicPlugin(Star):
             self.keywords.extend(player.platform.keywords)
         logger.debug(f"已注册触发词：{self.keywords}")
 
+    @staticmethod
+    def _get_player_unavailable_message(player: BaseMusicPlayer | None) -> str | None:
+        if isinstance(player, SpotifyMusic) and not player.is_configured():
+            return "Spotify 功能未配置，请先在插件配置中填写 spotify_client_id 和 spotify_client_secret"
+        return None
+
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_search_song(self, event: AstrMessageEvent):
-        """监听点歌命令： 点歌、网易点歌、网易nj、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌"""
+        """监听点歌命令： 点歌、网易点歌、网易nj、Spotify点歌、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌"""
         # 解析参数
         if not event.is_at_or_wake_command:
             return
@@ -84,6 +90,9 @@ class MusicPlugin(Star):
         if "点歌" == cmd:
             player = self.get_player(default=True)
         if not player:
+            return
+        if unavailable_message := self._get_player_unavailable_message(player):
+            yield event.plain_result(unavailable_message)
             return
         args = arg.split()
         index: int = int(args[-1]) if args[-1].isdigit() else 0
@@ -157,6 +166,9 @@ class MusicPlugin(Star):
         if not player:
             yield event.plain_result("无可用播放器")
             return
+        if unavailable_message := self._get_player_unavailable_message(player):
+            yield event.plain_result(unavailable_message)
+            return
         songs = await player.fetch_songs(keyword=song_name, limit=1)
         if not songs:
             yield event.plain_result("没找到相关歌曲")
@@ -173,6 +185,8 @@ class MusicPlugin(Star):
         player = self.get_player(default=True)
         if not player:
             return "无可用播放器"
+        if unavailable_message := self._get_player_unavailable_message(player):
+            return unavailable_message
         songs = await player.fetch_songs(keyword=song_name, limit=1)
         if not songs:
             return "没找到相关歌曲"
@@ -185,6 +199,9 @@ class MusicPlugin(Star):
         player = self.get_player(default=True)
         if not player:
             yield event.plain_result("无可用播放器")
+            return
+        if unavailable_message := self._get_player_unavailable_message(player):
+            yield event.plain_result(unavailable_message)
             return
 
         # 搜索歌曲
@@ -210,6 +227,9 @@ class MusicPlugin(Star):
         player = self.get_player(default=True)
         if not player:
             yield event.plain_result("无可用播放器")
+            return
+        if unavailable_message := self._get_player_unavailable_message(player):
+            yield event.plain_result(unavailable_message)
             return
 
         # 搜索歌曲
