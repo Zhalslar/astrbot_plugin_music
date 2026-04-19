@@ -12,7 +12,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 from .config import PluginConfig
 from .downloader import Downloader
 from .model import Song
-from .platform import BaseMusicPlayer, NetEaseMusic, NetEaseMusicNodeJS
+from .platform import BaseMusicPlayer, NetEaseMusic, NetEaseMusicNodeJS, SpotifyMusic
 from .renderer import MusicRenderer
 
 
@@ -219,6 +219,8 @@ class MusicSender:
         self, mode: str, event: AstrMessageEvent, player: BaseMusicPlayer
     ) -> bool:
         platform = event.get_platform_name()
+        if isinstance(player, SpotifyMusic):
+            return mode == "text"
         match mode:
             case "text":
                 return True
