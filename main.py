@@ -12,7 +12,7 @@ from astrbot.core.utils.session_waiter import (
 
 from .core.config import PluginConfig
 from .core.downloader import Downloader
-from .core.platform import BaseMusicPlayer, SpotifyMusic
+from .core.platform import BaseMusicPlayer
 from .core.playlist import Playlist
 from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
@@ -73,8 +73,8 @@ class MusicPlugin(Star):
 
     @staticmethod
     def _get_player_unavailable_message(player: BaseMusicPlayer | None) -> str | None:
-        if isinstance(player, SpotifyMusic) and not player.is_configured():
-            return "Spotify 功能未配置，请先在插件配置中填写 spotify_client_id 和 spotify_client_secret"
+        if player and not player.is_configured():
+            return player.get_unconfigured_message()
         return None
 
     @filter.event_message_type(filter.EventMessageType.ALL)
