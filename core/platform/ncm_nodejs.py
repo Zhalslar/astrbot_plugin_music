@@ -21,6 +21,12 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
     def __init__(self, config: PluginConfig):
         super().__init__(config)
 
+    def supports_send_mode(self, mode: str) -> bool:
+        return mode == "card" or super().supports_send_mode(mode)
+
+    def get_card_style(self) -> str | None:
+        return "native_music"
+
     async def fetch_songs(self, keyword: str, limit: int = 5, extra=None) -> list[Song]:
         result = await self._request(
             url=f"{self.cfg.nodejs_base_url}/search",

@@ -48,6 +48,22 @@ class BaseMusicPlayer(ABC):
         """获取所有已注册的 Parser 类"""
         return cls._registry
 
+    def is_configured(self) -> bool:
+        """播放器是否已具备运行所需配置"""
+        return True
+
+    def supports_send_mode(self, mode: str) -> bool:
+        """声明播放器支持的发送方式"""
+        return mode in {"text", "record", "file"}
+
+    def get_unconfigured_message(self) -> str:
+        """返回播放器未配置时的提示文案"""
+        return f"{self.platform.display_name} 功能未配置，请先在插件配置中填写所需参数"
+
+    def get_card_style(self) -> str | None:
+        """声明卡片发送风格：native_music / image / None"""
+        return None
+
     # ---------- 子类必须实现 ----------
 
     @abstractmethod
@@ -78,6 +94,10 @@ class BaseMusicPlayer(ABC):
             if not song.lyrics:
                 song.lyrics = data.get("lrc")
         return song
+
+    async def fetch_card(self, song: Song) -> Song:
+        """默认卡片数据获取实现"""
+        return await self.fetch_extra(song)
 
     async def fetch_comments(self, song: Song) -> Song:
         """
