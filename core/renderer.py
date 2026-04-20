@@ -74,3 +74,56 @@ class MusicRenderer:
         img.save(img_bytes, format="JPEG")
         img_bytes.seek(0)
         return img_bytes.getvalue()
+
+    def draw_song_card(
+        self,
+        title: str,
+        artists: str,
+        duration_text: str | None = None,
+        note: str | None = None,
+        cover_bytes: bytes | None = None,
+        card_width: int = 1000,
+        card_height: int = 320,
+    ) -> bytes:
+        """渲染歌曲信息卡片为 JPEG 字节流"""
+        img = Image.new("RGB", (card_width, card_height), (29, 185, 84))
+        draw = ImageDraw.Draw(img)
+
+        title_font = ImageFont.truetype(self.font_path, 42)
+        text_font = ImageFont.truetype(self.font_path, 28)
+        small_font = ImageFont.truetype(self.font_path, 22)
+
+        if cover_bytes:
+            try:
+                cover = Image.open(io.BytesIO(cover_bytes)).convert("RGB")
+                cover = cover.resize((220, 220))
+                img.paste(cover, (50, 50))
+            except Exception:
+                cover_bytes = None
+
+        left = 300 if cover_bytes else 60
+        draw.text((left, 55), title, font=title_font, fill=(255, 255, 255))
+        draw.text((left, 125), f"艺人：{artists}", font=text_font, fill=(245, 245, 245))
+        if duration_text:
+            draw.text(
+                (left, 175),
+                f"时长：{duration_text}",
+                font=text_font,
+                fill=(245, 245, 245),
+            )
+        if note:
+            draw.text((left, 225), note, font=small_font, fill=(235, 235, 235))
+
+        footer = "Spotify Card"
+        bbox = draw.textbbox((0, 0), footer, font=small_font)
+        draw.text(
+            (card_width - (bbox[2] - bbox[0]) - 30, card_height - 45),
+            footer,
+            font=small_font,
+            fill=(235, 235, 235),
+        )
+
+        img_bytes = io.BytesIO()
+        img.save(img_bytes, format="JPEG")
+        img_bytes.seek(0)
+        return img_bytes.getvalue()

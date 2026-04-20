@@ -12,7 +12,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 from .config import PluginConfig
 from .downloader import Downloader
 from .model import Song
-from .platform import BaseMusicPlayer, NetEaseMusic, NetEaseMusicNodeJS, SpotifyMusic
+from .platform import BaseMusicPlayer
 from .renderer import MusicRenderer
 
 
@@ -105,27 +105,55 @@ class MusicSender:
             return False
 
     async def send_card(
-        self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
+        self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发卡片"""
-        payloads: dict = {
-            "message": [
-                {
-                    "type": "music",
-                    "data": {
-                        "type": "163",
-                        "id": song.id,
-                    },
-                }
-            ]
-        }
-        try:
-            await self.send_msg(event, payloads)
-            return True
-        except Exception as e:
-            logger.error(e)
-            await event.send(event.plain_result(str(e)))
-            return False
+        card_style = player.get_card_style()
+        if card_style == "native_music":
+            if not isinstance(event, AiocqhttpMessageEvent):
+                return False
+            payloads: dict = {
+                "message": [
+                    {
+                        "type": "music",
+                        "data": {
+                            "type": "163",
+                            "id": song.id,
+                        },
+                    }
+                ]
+            }
+            try:
+                await self.send_msg(event, payloads)
+                return True
+            except Exception as e:
+                logger.error(e)
+                await event.send(event.plain_result(str(e)))
+                return False
+
+        if card_style == "image":
+            try:
+                song = await player.fetch_card(song)
+                cover_bytes = None
+                if song.cover_url:
+                    cover_bytes = await self.downloader.download_image(song.cover_url)
+                duration_text = self._format_time(song.duration) if song.duration else None
+                card_bytes = self.renderer.draw_song_card(
+                    title=song.title or song.name or "未知歌曲",
+                    artists=song.author or song.artists or "未知艺人",
+                    duration_text=duration_text,
+                    note=song.note,
+                    cover_bytes=cover_bytes,
+                )
+                await event.send(MessageChain(chain=[Image.fromBytes(card_bytes)]))
+                if song.audio_url:
+                    await event.send(event.plain_result(f"Spotify 链接：{song.audio_url}"))
+                return True
+            except Exception as e:
+                logger.error(f"【{song.name}】卡片发送失败: {e}")
+                return False
+
+        return False
 
     async def send_record(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
@@ -219,15 +247,16 @@ class MusicSender:
         self, mode: str, event: AstrMessageEvent, player: BaseMusicPlayer
     ) -> bool:
         platform = event.get_platform_name()
-        if isinstance(player, SpotifyMusic):
-            return mode == "text"
+        if not player.supports_send_mode(mode):
+            return False
         match mode:
             case "text":
                 return True
             case "card":
-                return platform == "aiocqhttp" and isinstance(
-                    player, (NetEaseMusic, NetEaseMusicNodeJS)
-                )
+                card_style = player.get_card_style()
+                if card_style == "native_music":
+                    return platform == "aiocqhttp"
+                return card_style == "image"
             case "record":
                 return platform in self.cfg.record_supported
             case "file":

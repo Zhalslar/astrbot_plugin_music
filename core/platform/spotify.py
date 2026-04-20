@@ -30,6 +30,15 @@ class SpotifyMusic(BaseMusicPlayer):
     def is_configured(self) -> bool:
         return self._has_credentials()
 
+    def get_unconfigured_message(self) -> str:
+        return "Spotify 功能未配置，请先在插件配置中填写 spotify_client_id 和 spotify_client_secret"
+
+    def supports_send_mode(self, mode: str) -> bool:
+        return mode in {"card", "text"}
+
+    def get_card_style(self) -> str | None:
+        return "image"
+
     async def _get_access_token(self) -> str | None:
         if not self._has_credentials():
             logger.warning("Spotify 凭证未配置，跳过 Spotify 点歌")
@@ -89,7 +98,7 @@ class SpotifyMusic(BaseMusicPlayer):
             duration=track.get("duration_ms"),
             cover_url=SpotifyMusic._pick_cover(track),
             audio_url=external_url,
-            note="Spotify 外链，仅支持文本发送",
+            note="Spotify 外链，支持卡片或文本发送",
         )
 
     async def fetch_songs(
@@ -151,6 +160,13 @@ class SpotifyMusic(BaseMusicPlayer):
         song.cover_url = song.cover_url or mapped_song.cover_url
         song.duration = song.duration or mapped_song.duration
         song.note = mapped_song.note
+        return song
+
+    async def fetch_card(self, song: Song) -> Song:
+        song = await self.fetch_extra(song)
+        song.title = song.title or song.name
+        song.author = song.author or song.artists
+        song.note = song.note or "Spotify 卡片模式"
         return song
 
     async def fetch_comments(self, song: Song) -> Song:
