@@ -1,4 +1,3 @@
-
 import json
 from abc import ABC, abstractmethod
 from typing import ClassVar
@@ -122,6 +121,27 @@ class BaseMusicPlayer(ABC):
             logger.warning(f"{self.__class__.__name__} fetch_lyrics 失败: {e}")
             return song
 
+    async def resolve_lyrics(self, song: Song) -> Song:
+        """将歌词 URL 解析为歌词正文。"""
+        lyrics = song.lyrics.strip() if isinstance(song.lyrics, str) else ""
+        if not lyrics.startswith(("http://", "https://")):
+            return song
+
+        try:
+            async with self.session.get(lyrics, headers=self.HEADERS) as resp:
+                if resp.status != 200:
+                    logger.warning(f"歌词 URL 请求返回 {resp.status}: {lyrics}")
+                    return song
+
+                content = (await resp.text()).strip("\ufeff").strip()
+                logger.debug(f"已成功解析歌词URL: {lyrics}")
+                if content:
+                    song.lyrics = content
+        except Exception as e:
+            logger.warning(f"{self.__class__.__name__} resolve_lyrics 失败: {e}")
+
+        return song
+
     async def close(self):
         """释放 session"""
         if not self.session.closed:
@@ -169,9 +189,6 @@ class BaseMusicPlayer(ABC):
             except json.JSONDecodeError:
                 return resp_text
 
-
         except Exception as e:
             logger.warning(f"解析响应失败: {e}")
             return None
-
-
