@@ -93,6 +93,8 @@ class MusicSender:
         """发歌词"""
         if not song.lyrics:
             await player.fetch_lyrics(song)
+        if song.lyrics:
+            await player.resolve_lyrics(song)
         if not song.lyrics:
             logger.error(f"【{song.name}】歌词获取失败")
             return False
