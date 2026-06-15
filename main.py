@@ -59,7 +59,11 @@ class MusicPlugin(Star):
             elif word:
                 word_ = word.strip().lower()
                 for keyword in player.platform.keywords:
-                    if keyword.lower() in word_:
+                    kw = keyword.lower()
+                    # Avoid treating normal sentences containing a platform keyword
+                    # (e.g. "主动加这个qq吗") as music commands.
+                    # Only exact platform commands or "<platform>点歌" should match.
+                    if word_ == kw or word_ == f"{kw}点歌":
                         return player
 
     def _register_player(self):
