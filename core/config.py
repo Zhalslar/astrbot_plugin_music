@@ -122,7 +122,6 @@ class PluginConfig(ConfigNode):
     clear_cache: bool
     enc_sec_key: str
     enc_params: str
-    playlist_limit: int
 
     _plugin_name: str = "astrbot_plugin_music"
 
@@ -136,9 +135,6 @@ class PluginConfig(ConfigNode):
         self.data_dir = Path(get_astrbot_plugin_data_path()) / self._plugin_name
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
-        self.playlist_dir = self.data_dir / "playlist"
-        self.playlist_dir.mkdir(parents=True, exist_ok=True)
-        self.db_path = self.data_dir / "playlist.db"
 
         self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
 
