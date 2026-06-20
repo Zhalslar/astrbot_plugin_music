@@ -29,7 +29,7 @@ class CardTheme:
         return ImageFont.truetype(font_path, self.font_size)
 
 
-class VideoCardRenderer:
+class CardRenderer:
     def __init__(
         self,
         config: PluginConfig,
@@ -48,7 +48,7 @@ class VideoCardRenderer:
 
     async def draw_card(
         self,
-        video: dict,
+        media: dict,
         index: int,
         cover_map: dict[str, Image.Image],
     ) -> Image.Image:
@@ -63,7 +63,7 @@ class VideoCardRenderer:
             )
             draw = ImageDraw.Draw(card)
 
-            raw_url = str(video.get("cover") or video.get("pic") or "")
+            raw_url = str(media.get("cover") or media.get("pic") or "")
 
             pic_url = raw_url
             thumb = cover_map.get(pic_url) or Image.new(
@@ -98,19 +98,19 @@ class VideoCardRenderer:
 
             draw.text(
                 (8, theme.thumb_height - 20),
-                self.format_count(int(video.get("play", 0) or 0)),
+                self.format_count(int(media.get("play", 0) or 0)),
                 font=font,
                 fill=theme.overlay_text_color,
             )
             draw.text(
                 (theme.card_width - 40, theme.thumb_height - 20),
-                str(video.get("duration") or "0:00"),
+                str(media.get("duration") or "0:00"),
                 font=font,
                 fill=theme.overlay_text_color,
             )
 
             raw_title = BeautifulSoup(
-                str(video.get("title") or ""),
+                str(media.get("title") or ""),
                 "html.parser",
             ).get_text()
             title = (
@@ -127,7 +127,7 @@ class VideoCardRenderer:
 
             draw.text(
                 (8, theme.card_height - 30),
-                self._build_author_text(video),
+                self._build_author_text(media),
                 font=font,
                 fill=theme.sub_text_color,
             )
