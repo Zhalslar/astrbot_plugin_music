@@ -10,10 +10,10 @@ from .config import PluginConfig
 from .model import Song
 
 
-class VideoCardTheme:
-    card_width: int = 300
-    card_height: int = 250
-    thumb_height: int = 168
+class CardTheme:
+    card_width: int = 220
+    card_height: int = 278
+    thumb_height: int = 220
     margin: int = 16
     corner_radius: int = 10
     font_size: int = 16
@@ -33,10 +33,10 @@ class VideoCardRenderer:
     def __init__(
         self,
         config: PluginConfig,
-        theme: VideoCardTheme | None = None,
+        theme: CardTheme | None = None,
     ):
         self.cfg = config
-        self.theme = theme or VideoCardTheme()
+        self.theme = theme or CardTheme()
         self.font = self.theme.load_font(str(self.cfg.font_path))
 
     def format_count(self, count: int) -> str:
@@ -45,15 +45,6 @@ class VideoCardRenderer:
         if count >= 1000:
             return f"{count / 1000:.1f}k"
         return str(count)
-
-    @staticmethod
-    def _normalize_cover_url(url: str) -> str:
-        url = url.strip()
-        if url.startswith("//"):
-            return f"https:{url}"
-        if url.startswith("/"):
-            return f"https://music.txqq.pro{url}"
-        return url
 
     async def draw_card(
         self,
@@ -72,9 +63,8 @@ class VideoCardRenderer:
             )
             draw = ImageDraw.Draw(card)
 
-            raw_url = self._normalize_cover_url(
-                str(video.get("cover") or video.get("pic") or "")
-            )
+            raw_url = str(video.get("cover") or video.get("pic") or "")
+
             pic_url = raw_url
             thumb = cover_map.get(pic_url) or Image.new(
                 "RGB",
@@ -113,7 +103,7 @@ class VideoCardRenderer:
                 fill=theme.overlay_text_color,
             )
             draw.text(
-                (theme.card_width - 60, theme.thumb_height - 20),
+                (theme.card_width - 40, theme.thumb_height - 20),
                 str(video.get("duration") or "0:00"),
                 font=font,
                 fill=theme.overlay_text_color,
@@ -136,14 +126,14 @@ class VideoCardRenderer:
             )
 
             draw.text(
-                (8, theme.thumb_height + 60),
+                (8, theme.card_height - 30),
                 self._build_author_text(video),
                 font=font,
                 fill=theme.sub_text_color,
             )
 
             draw.text(
-                (theme.card_width - 30, theme.card_height - 20),
+                (theme.card_width - 20, theme.card_height - 25),
                 str(index),
                 font=font,
                 fill=theme.sub_text_color,
@@ -167,11 +157,10 @@ class VideoCardRenderer:
                 self.theme.card_bg,
             )
 
-    async def render_video_list_image(
+    async def render_list_image(
         self,
         video_list: list,
         cover_map: dict[str, Image.Image],
-        title: str | None = None,
         jpeg_quality: int = 80,
     ) -> bytes:
         theme = self.theme
@@ -198,26 +187,16 @@ class VideoCardRenderer:
 
         total_width = rows[0].width
         total_height = sum(row.height for row in rows)
-        title_height = 48 if title else 0
+
         canvas = Image.new(
             "RGBA",
-            (total_width, total_height + title_height),
+            (total_width, total_height),
             theme.canvas_bg,
         )
 
-        if title:
-            title_draw = ImageDraw.Draw(canvas)
-            title_text = BeautifulSoup(str(title), "html.parser").get_text().strip()
-            title_draw.text(
-                (theme.margin, 14),
-                title_text,
-                font=self.font,
-                fill=theme.title_color,
-            )
-
         y_offset = 0
         for row in rows:
-            canvas.paste(row, (0, y_offset + title_height), row)
+            canvas.paste(row, (0, y_offset), row)
             y_offset += row.height
 
         final_image = Image.new("RGB", canvas.size, theme.canvas_bg)
@@ -231,21 +210,20 @@ class VideoCardRenderer:
         self,
         songs: list[Song],
         cover_map: dict[str, Image.Image],
-        title: str | None = None,
         jpeg_quality: int = 80,
     ) -> bytes:
-        video_list = [
+        song_list = [
             {
-                "cover": self._normalize_cover_url(song.cover_url or ""),
-                "title": song.name or "",
-                "author": song.artists or "",
+                "cover": song.cover_url,
+                "title": song.name,
+                "author": song.artists,
                 "duration": self._format_duration(song.duration),
                 "play": 0,
             }
             for song in songs
         ]
-        return await self.render_video_list_image(
-            video_list, cover_map, title=title, jpeg_quality=jpeg_quality
+        return await self.render_list_image(
+            song_list, cover_map, jpeg_quality=jpeg_quality
         )
 
     @staticmethod
