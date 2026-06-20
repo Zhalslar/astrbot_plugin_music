@@ -129,6 +129,7 @@ class TXQQMusic(BaseMusicPlayer):
             songs.append(
                 Song(
                     id=s.get("songid"),
+                    source=platform_type,
                     name=s.get("title"),
                     artists=s.get("author"),
                     audio_url=s.get("url") or s.get("link"),
