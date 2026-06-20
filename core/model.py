@@ -6,6 +6,9 @@ class Song:
     id: str
     """歌曲ID"""
 
+    source: str | None = None
+    """歌曲来源平台标识"""
+
     name: str | None = None
     """歌曲原始名称"""
 

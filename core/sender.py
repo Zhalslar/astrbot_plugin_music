@@ -11,7 +11,7 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 from .config import PluginConfig
 from .downloader import Downloader
 from .model import Song
-from .platform import BaseMusicPlayer, NetEaseMusic, NetEaseMusicNodeJS
+from .platform import BaseMusicPlayer, TXQQMusic
 from .renderer import MusicRenderer
 
 
@@ -107,17 +107,37 @@ class MusicSender:
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发卡片"""
-        payloads: dict = {
-            "message": [
-                {
-                    "type": "music",
-                    "data": {
-                        "type": "163",
-                        "id": song.id,
-                    },
-                }
-            ]
-        }
+        if isinstance(player, TXQQMusic):
+            if not song.audio_url or not song.cover_url:
+                song = await player.fetch_extra(song)
+
+            payloads: dict = {
+                "message": [
+                    {
+                        "type": "music",
+                        "data": {
+                            "type": "custom",
+                            "url": song.audio_url or "",
+                            "audio": song.audio_url or "",
+                            "title": song.name or "",
+                            "image": song.cover_url or "",
+                            "singer": song.artists or "",
+                        },
+                    }
+                ]
+            }
+        else:
+            payloads = {
+                "message": [
+                    {
+                        "type": "music",
+                        "data": {
+                            "type": "163",
+                            "id": song.id,
+                        },
+                    }
+                ]
+            }
         try:
             await self.send_msg(event, payloads)
             return True
@@ -214,17 +234,13 @@ class MusicSender:
             "text": self.send_text,
         }.get(mode)
 
-    def _is_mode_supported(
-        self, mode: str, event: AstrMessageEvent, player: BaseMusicPlayer
-    ) -> bool:
+    def _is_mode_supported(self, mode: str, event: AstrMessageEvent) -> bool:
         platform = event.get_platform_name()
         match mode:
             case "text":
                 return True
             case "card":
-                return platform == "aiocqhttp" and isinstance(
-                    player, (NetEaseMusic, NetEaseMusicNodeJS)
-                )
+                return platform == "aiocqhttp"
             case "record":
                 return platform in self.cfg.record_supported
             case "file":
@@ -248,7 +264,7 @@ class MusicSender:
         target_modes = modes if modes is not None else self.cfg.real_send_modes
 
         for mode in target_modes:
-            if not self._is_mode_supported(mode, event, player):
+            if not self._is_mode_supported(mode, event):
                 logger.debug(f"{mode} 不支持，跳过")
                 continue
 
