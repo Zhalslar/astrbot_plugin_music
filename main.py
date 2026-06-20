@@ -12,9 +12,10 @@ from astrbot.core.utils.session_waiter import (
 
 from .core.config import PluginConfig
 from .core.downloader import Downloader
+from .core.lyrics_renderer import LyricsRenderer
 from .core.platform import BaseMusicPlayer
-from .core.renderer import MusicRenderer
 from .core.sender import MusicSender
+from .core.song_renderer import VideoCardRenderer
 from .core.utils import parse_user_input
 
 
@@ -30,8 +31,11 @@ class MusicPlugin(Star):
         self._register_player()
         self.downloader = Downloader(self.cfg)
         await self.downloader.initialize()
-        self.renderer = MusicRenderer(self.cfg)
-        self.sender = MusicSender(self.cfg, self.renderer, self.downloader)
+        self.lyrics_renderer = LyricsRenderer(self.cfg)
+        self.song_renderer = VideoCardRenderer(self.cfg)
+        self.sender = MusicSender(
+            self.cfg, self.lyrics_renderer, self.downloader, self.song_renderer
+        )
 
     async def terminate(self):
         """当插件被卸载/停用时会调用"""
@@ -111,7 +115,7 @@ class MusicPlugin(Star):
             async def send_selection():
                 nonlocal selection_message_id
                 selection_message_id = await self.sender.send_song_selection(
-                    event=event, songs=songs, title=title
+                    event=event, songs=songs, title=title, player=player
                 )
 
             asyncio.create_task(send_selection())

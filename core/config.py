@@ -111,6 +111,7 @@ class PluginConfig(ConfigNode):
     nodejs_base_url: str
     song_limit: int
     select_mode: str
+    cards_per_row: int
     send_modes: list[str]
     record_supported: list[str]
     file_supported: list[str]
