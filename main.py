@@ -146,7 +146,7 @@ class MusicPlugin(Star):
                 controller.stop()
                 await self.sender.send_song(event, player, selected_song, modes=modes)
                 if selection_message_id and self.cfg.timeout_recall:
-                    await event.bot.delete_msg(message_id=selection_message_id)
+                    await event.bot.delete_msg(message_id=selection_message_id) # type: ignore
 
             try:
                 await empty_mention_waiter(event)
