@@ -69,7 +69,7 @@ class MusicSender:
         """
         if self.cfg.select_mode == "image":
             return await self._send_song_selection_image(
-                event=event, songs=songs, title=title, player=player
+                event=event, songs=songs, player=player
             )
 
         formatted_songs = [
@@ -91,7 +91,6 @@ class MusicSender:
         self,
         event: AstrMessageEvent,
         songs: list[Song],
-        title: str | None = None,
         player: BaseMusicPlayer | None = None,
     ) -> int | None:
         song_items = []
@@ -105,7 +104,7 @@ class MusicSender:
 
         cover_map = await self._build_cover_map(cover_urls)
         image_bytes = await self.song_renderer.render_song_list_image(
-            song_items, cover_map, title=title
+            song_items, cover_map
         )
 
         if isinstance(event, AiocqhttpMessageEvent):
@@ -124,7 +123,9 @@ class MusicSender:
         await event.send(MessageChain(chain=[Image.fromBytes(image_bytes)]))
         return None
 
-    async def _build_cover_map(self, cover_urls: list[str]) -> dict[str, PILImage.Image]:
+    async def _build_cover_map(
+        self, cover_urls: list[str]
+    ) -> dict[str, PILImage.Image]:
         cover_map: dict[str, PILImage.Image] = {}
         for cover_url in dict.fromkeys(cover_urls):
             try:
