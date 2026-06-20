@@ -112,9 +112,15 @@ class MusicPlugin(Star):
         # 未提输入序号，等待用户选择歌曲
         else:
             title = f"【{player.platform.display_name}】"
-            asyncio.create_task(
-                self.sender.send_song_selection(event=event, songs=songs, title=title)
-            )
+            selection_message_id: int | None = None
+
+            async def send_selection():
+                nonlocal selection_message_id
+                selection_message_id = await self.sender.send_song_selection(
+                    event=event, songs=songs, title=title
+                )
+
+            asyncio.create_task(send_selection())
 
             @session_waiter(timeout=self.cfg.timeout)
             async def empty_mention_waiter(
@@ -137,8 +143,10 @@ class MusicPlugin(Star):
                     controller.stop()
                     return
                 selected_song = songs[index - 1]
-                await self.sender.send_song(event, player, selected_song, modes=modes)
                 controller.stop()
+                await self.sender.send_song(event, player, selected_song, modes=modes)
+                if selection_message_id and self.cfg.timeout_recall:
+                    await event.bot.delete_msg(message_id=selection_message_id)
 
             try:
                 await empty_mention_waiter(event)

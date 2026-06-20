@@ -1,4 +1,3 @@
-import asyncio
 import random
 
 from astrbot.api import logger
@@ -50,7 +49,7 @@ class MusicSender:
 
     async def send_song_selection(
         self, event: AstrMessageEvent, songs: list[Song], title: str | None = None
-    ) -> None:
+    ) -> int | None:
         """
         发送歌曲选择
         """
@@ -64,12 +63,10 @@ class MusicSender:
         msg = "\n".join(formatted_songs)
         if isinstance(event, AiocqhttpMessageEvent):
             payloads = {"message": [{"type": "text", "data": {"text": msg}}]}
-            message_id = await self.send_msg(event, payloads)
-            if message_id and self.cfg.timeout_recall:
-                await asyncio.sleep(self.cfg.timeout)
-                await event.bot.delete_msg(message_id=message_id)
-        else:
-            await event.send(event.plain_result(msg))
+            return await self.send_msg(event, payloads)
+
+        await event.send(event.plain_result(msg))
+        return None
 
     async def send_comment(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
