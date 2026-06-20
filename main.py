@@ -15,7 +15,7 @@ from .core.downloader import Downloader
 from .core.lyrics_renderer import LyricsRenderer
 from .core.platform import BaseMusicPlayer
 from .core.sender import MusicSender
-from .core.song_renderer import VideoCardRenderer
+from .core.song_renderer import CardRenderer
 from .core.utils import parse_user_input
 
 
@@ -32,7 +32,7 @@ class MusicPlugin(Star):
         self.downloader = Downloader(self.cfg)
         await self.downloader.initialize()
         self.lyrics_renderer = LyricsRenderer(self.cfg)
-        self.song_renderer = VideoCardRenderer(self.cfg)
+        self.song_renderer = CardRenderer(self.cfg)
         self.sender = MusicSender(
             self.cfg, self.lyrics_renderer, self.downloader, self.song_renderer
         )
