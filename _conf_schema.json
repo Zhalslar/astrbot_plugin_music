@@ -40,17 +40,30 @@
     },
     "select_mode": {
         "description": "选择模式",
-        "hint": "此配置决定搜索歌曲的展示方法。单曲模式默认选取第一首歌曲",
+        "hint": "此配置决定搜索歌曲的展示方法。单曲模式默认选取第一首歌曲而无需进行选择",
         "type": "string",
         "options": [
             "text",
+            "image",
             "single"
         ],
         "labels": [
             "文本模式",
+            "图片模式",
             "单曲模式"
         ],
         "default": "text"
+    },
+    "cards_per_row": {
+        "description": "候选菜单的列数",
+        "type": "int",
+        "hint": "定义图片模式下，候选菜单以多少列显示",
+        "slider": {
+            "min": 1,
+            "max": 5,
+            "step": 1
+        },
+        "default": 2
     },
     "send_modes": {
         "description": "发送模式",
@@ -179,17 +192,6 @@
         "hint": "文件模式下需要下载音频文件，缓存目录在data/plugin_data/astrbot_plugin_music/songs，此选项用于重载插件时是否清空缓存",
         "type": "bool",
         "default": true
-    },
-    "playlist_limit": {
-        "description": "歌单容量限制",
-        "hint": "决定了用户的歌单最多能添加多少首歌",
-        "type": "int",
-        "slider": {
-            "min": 10,
-            "max": 200,
-            "step": 1
-        },
-        "default": 100
     },
     "enc_sec_key": {
         "description": "网易云野生密钥",

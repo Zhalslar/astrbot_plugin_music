@@ -1,4 +1,8 @@
+import base64
 import random
+from io import BytesIO
+
+from PIL import Image as PILImage
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
@@ -10,18 +14,24 @@ from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
 
 from .config import PluginConfig
 from .downloader import Downloader
+from .lyrics_renderer import LyricsRenderer
 from .model import Song
 from .platform import BaseMusicPlayer, TXQQMusic
-from .renderer import MusicRenderer
+from .song_renderer import VideoCardRenderer
 
 
 class MusicSender:
     def __init__(
-        self, config: PluginConfig, renderer: MusicRenderer, downloader: Downloader
+        self,
+        config: PluginConfig,
+        lyrics_renderer: LyricsRenderer,
+        downloader: Downloader,
+        song_renderer: VideoCardRenderer,
     ):
         self.cfg = config
-        self.renderer = renderer
+        self.lyrics_renderer = lyrics_renderer
         self.downloader = downloader
+        self.song_renderer = song_renderer
 
     @staticmethod
     def _format_time(duration_ms):
@@ -48,11 +58,20 @@ class MusicSender:
         return result.get("message_id")
 
     async def send_song_selection(
-        self, event: AstrMessageEvent, songs: list[Song], title: str | None = None
+        self,
+        event: AstrMessageEvent,
+        songs: list[Song],
+        title: str | None = None,
+        player: BaseMusicPlayer | None = None,
     ) -> int | None:
         """
         发送歌曲选择
         """
+        if self.cfg.select_mode == "image":
+            return await self._send_song_selection_image(
+                event=event, songs=songs, title=title, player=player
+            )
+
         formatted_songs = [
             f"{index + 1}. {song.name} - {song.artists}"
             for index, song in enumerate(songs)
@@ -67,6 +86,56 @@ class MusicSender:
 
         await event.send(event.plain_result(msg))
         return None
+
+    async def _send_song_selection_image(
+        self,
+        event: AstrMessageEvent,
+        songs: list[Song],
+        title: str | None = None,
+        player: BaseMusicPlayer | None = None,
+    ) -> int | None:
+        song_items = []
+        cover_urls: list[str] = []
+        for song in songs:
+            if player and (not song.cover_url or not song.audio_url):
+                song = await player.fetch_extra(song)
+            song_items.append(song)
+            if song.cover_url:
+                cover_urls.append(song.cover_url)
+
+        cover_map = await self._build_cover_map(cover_urls)
+        image_bytes = await self.song_renderer.render_song_list_image(
+            song_items, cover_map, title=title
+        )
+
+        if isinstance(event, AiocqhttpMessageEvent):
+            payloads = {
+                "message": [
+                    {
+                        "type": "image",
+                        "data": {
+                            "file": f"base64://{base64.b64encode(image_bytes).decode()}",
+                        },
+                    }
+                ]
+            }
+            return await self.send_msg(event, payloads)
+
+        await event.send(MessageChain(chain=[Image.fromBytes(image_bytes)]))
+        return None
+
+    async def _build_cover_map(self, cover_urls: list[str]) -> dict[str, PILImage.Image]:
+        cover_map: dict[str, PILImage.Image] = {}
+        for cover_url in dict.fromkeys(cover_urls):
+            try:
+                data = await self.downloader.download_image(cover_url, close_ssl=False)
+                if not data:
+                    continue
+                image = PILImage.open(BytesIO(data)).convert("RGB")
+                cover_map[cover_url] = image
+            except Exception as e:
+                logger.warning(f"封面下载失败: {cover_url}, {e}")
+        return cover_map
 
     async def send_comment(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
@@ -96,7 +165,7 @@ class MusicSender:
             logger.error(f"【{song.name}】歌词获取失败")
             return False
         try:
-            image = self.renderer.draw_lyrics(song.lyrics)
+            image = self.lyrics_renderer.draw_lyrics(song.lyrics)
             await event.send(MessageChain(chain=[Image.fromBytes(image)]))
             return True
         except Exception as e:

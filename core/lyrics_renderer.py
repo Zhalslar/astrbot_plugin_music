@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 from .config import PluginConfig
 
 
-class MusicRenderer:
+class LyricsRenderer:
     def __init__(self, config: PluginConfig):
         self.cfg = config
         self.font_path = config.font_path
