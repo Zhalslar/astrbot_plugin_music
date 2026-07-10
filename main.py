@@ -144,7 +144,7 @@ class MusicPlugin(Star):
                 controller.stop()
                 await self.sender.send_song(event, player, selected_song, modes=modes)
                 if selection_message_id and self.cfg.timeout_recall:
-                    await event.bot.delete_msg(message_id=selection_message_id) # type: ignore
+                    await event.bot.delete_msg(message_id=selection_message_id)  # type: ignore
 
             try:
                 await empty_mention_waiter(event)
@@ -156,7 +156,7 @@ class MusicPlugin(Star):
 
         event.stop_event()
 
-    @filter.command("查歌词")
+    @filter.command("查歌词", alias={"查看歌词"})
     async def query_lyrics(self, event: AstrMessageEvent, song_name: str):
         """查歌词 <搜索词>"""
         player = self.get_player(default=True)
@@ -168,6 +168,23 @@ class MusicPlugin(Star):
             yield event.plain_result("没找到相关歌曲")
             return
         await self.sender.send_lyrics(event, player, songs[0])
+
+    @filter.llm_tool()
+    async def query_lyrics_by_name(self, event: AstrMessageEvent, song_name: str):
+        """当用户想查看歌词时，根据歌名（可含歌手）搜索并发送歌词图片。
+
+        Args:
+            song_name(string): 歌曲名称或包含歌手的关键词
+        """
+        player = self.get_player(default=True)
+        if not player:
+            return "无可用播放器"
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
+        if not songs:
+            return "没找到相关歌曲"
+        sent = await self.sender.send_lyrics(event, player, songs[0])
+        if not sent:
+            return "歌词获取或发送失败"
 
     @filter.llm_tool()
     async def play_song_by_name(self, event: AstrMessageEvent, song_name: str):
@@ -183,4 +200,3 @@ class MusicPlugin(Star):
         if not songs:
             return "没找到相关歌曲"
         await self.sender.send_song(event, player, songs[0])
-
