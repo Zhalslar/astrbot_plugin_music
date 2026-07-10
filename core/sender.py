@@ -17,7 +17,7 @@ from .downloader import Downloader
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
 from .platform import BaseMusicPlayer, TXQQMusic
-from .song_renderer import VideoCardRenderer
+from .song_renderer import CardRenderer
 
 
 class MusicSender:
@@ -26,7 +26,7 @@ class MusicSender:
         config: PluginConfig,
         lyrics_renderer: LyricsRenderer,
         downloader: Downloader,
-        song_renderer: VideoCardRenderer,
+        song_renderer: CardRenderer,
     ):
         self.cfg = config
         self.lyrics_renderer = lyrics_renderer
