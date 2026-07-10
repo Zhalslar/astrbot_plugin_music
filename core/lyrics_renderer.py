@@ -6,22 +6,47 @@ from PIL import Image, ImageDraw, ImageFont
 from .config import PluginConfig
 
 
+class LyricsTheme:
+    image_width: int = 1000
+    font_size: int = 30
+    line_spacing: int = 20
+    horizontal_padding: int = 80
+    vertical_padding: int = 50
+    top_color: tuple[int, int, int] = (255, 250, 240)
+    bottom_color: tuple[int, int, int] = (235, 255, 247)
+    text_color: tuple[int, int, int] = (70, 70, 70)
+
+    def load_font(self, font_path: str) -> ImageFont.FreeTypeFont:
+        return ImageFont.truetype(font_path, self.font_size)
+
+
 class LyricsRenderer:
-    def __init__(self, config: PluginConfig):
+    def __init__(
+        self,
+        config: PluginConfig,
+        theme: LyricsTheme | None = None,
+    ):
         self.cfg = config
+        self.theme = theme or LyricsTheme()
         self.font_path = config.font_path
-        self.font = ImageFont.truetype(self.font_path, 30)
+        self.font = self.theme.load_font(str(self.font_path))
 
     def draw_lyrics(
         self,
         lyrics: str,
-        image_width=1000,
-        line_spacing=20,
-        top_color=(255, 250, 240),
-        bottom_color=(235, 255, 247),
-        text_color=(70, 70, 70),
+        image_width: int | None = None,
+        line_spacing: int | None = None,
+        top_color: tuple[int, int, int] | None = None,
+        bottom_color: tuple[int, int, int] | None = None,
+        text_color: tuple[int, int, int] | None = None,
     ) -> bytes:
-        """Render lyrics as a JPEG image with a vertical gradient background"""
+        theme = self.theme
+        image_width = image_width if image_width is not None else theme.image_width
+        line_spacing = line_spacing if line_spacing is not None else theme.line_spacing
+        top_color = top_color or theme.top_color
+        bottom_color = bottom_color or theme.bottom_color
+        text_color = text_color or theme.text_color
+
         lines = lyrics.splitlines()
         cleaned_lines = []
         for line in lines:
@@ -30,7 +55,6 @@ class LyricsRenderer:
 
         dummy_img = Image.new("RGB", (image_width, 1))
         draw = ImageDraw.Draw(dummy_img)
-        horizontal_padding = 80
         line_heights = []
         max_line_width = 0
         for line in cleaned_lines:
@@ -39,9 +63,13 @@ class LyricsRenderer:
             line_heights.append(bbox[3])
             max_line_width = max(max_line_width, bbox[2] - bbox[0])
 
-        image_width = int(max(image_width, max_line_width + horizontal_padding * 2))
+        image_width = int(
+            max(image_width, max_line_width + theme.horizontal_padding * 2)
+        )
         total_height = int(
-            sum(line_heights) + line_spacing * (len(cleaned_lines) - 1) + 100
+            sum(line_heights)
+            + line_spacing * (len(cleaned_lines) - 1)
+            + theme.vertical_padding * 2
         )
 
         img = Image.new("RGB", (image_width, total_height))
@@ -55,7 +83,7 @@ class LyricsRenderer:
 
         draw = ImageDraw.Draw(img)
 
-        y = 50
+        y = theme.vertical_padding
         for line, line_height in zip(cleaned_lines, line_heights):
             text = line if line.strip() else "　"
             bbox = draw.textbbox((0, 0), text, font=self.font)

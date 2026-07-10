@@ -41,7 +41,7 @@ class CardRenderer:
 
     def format_count(self, count: int) -> str:
         if count >= 10000:
-            return f"{count / 10000:.1f}万"
+            return f"{count / 10000:.1f}w"
         if count >= 1000:
             return f"{count / 1000:.1f}k"
         return str(count)
@@ -159,14 +159,14 @@ class CardRenderer:
 
     async def render_list_image(
         self,
-        video_list: list,
+        media_list: list,
         cover_map: dict[str, Image.Image],
         jpeg_quality: int = 80,
     ) -> bytes:
         theme = self.theme
         tasks = [
-            self.draw_card(video, index=i + 1, cover_map=cover_map)
-            for i, video in enumerate(video_list)
+            self.draw_card(media, index=i + 1, cover_map=cover_map)
+            for i, media in enumerate(media_list)
         ]
         cards = await asyncio.gather(*tasks)
 
@@ -212,7 +212,7 @@ class CardRenderer:
         cover_map: dict[str, Image.Image],
         jpeg_quality: int = 80,
     ) -> bytes:
-        song_list = [
+        media_list = [
             {
                 "cover": song.cover_url,
                 "title": song.name,
@@ -223,12 +223,12 @@ class CardRenderer:
             for song in songs
         ]
         return await self.render_list_image(
-            song_list, cover_map, jpeg_quality=jpeg_quality
+            media_list, cover_map, jpeg_quality=jpeg_quality
         )
 
     @staticmethod
-    def _build_author_text(video: dict) -> str:
-        return str(video.get("author") or "").strip() or "-"
+    def _build_author_text(media: dict) -> str:
+        return str(media.get("author") or "").strip() or "-"
 
     @staticmethod
     def _format_duration(duration_ms: int | None) -> str:
