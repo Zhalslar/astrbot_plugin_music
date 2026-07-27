@@ -4,6 +4,7 @@ from astrbot.api import logger
 
 from ..config import PluginConfig
 from ..model import Platform, Song
+from ..ncm_auth import build_ncm_song_url_request
 from .base import BaseMusicPlayer
 
 
@@ -76,9 +77,15 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
 
     async def fetch_extra(self, song: Song) -> Song:
         try:
+            url, cookies = build_ncm_song_url_request(
+                self.cfg.nodejs_base_url,
+                song.id,
+                self.cfg.nj_configs,
+            )
             result = await self._request(
-                url=f"{self.cfg.nodejs_base_url}/song/url?id={song.id}",
+                url=url,
                 method="GET",
+                cookies=cookies or None,
             )
             if not isinstance(result, dict):
                 logger.error(f"返回了意料之外数据：{result}")

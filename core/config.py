@@ -151,4 +151,9 @@ class PluginConfig(ConfigNode):
     def real_song_limit(self) -> int:
         return 1 if "single" in self.select_mode else self.song_limit
 
+    @property
+    def nj_configs(self) -> list[dict[str, Any]]:
+        """返回 nj 点歌的 template_list 原始配置。"""
 
+        configs = self._data.get("nj_configs", [])
+        return configs if isinstance(configs, list) else []
