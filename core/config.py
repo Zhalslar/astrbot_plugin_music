@@ -114,6 +114,7 @@ class PluginConfig(ConfigNode):
     cards_per_row: int
     send_modes: list[str]
     record_supported: list[str]
+    napcat_record_source: str
     file_supported: list[str]
     enable_comments: bool
     enable_lyrics: bool
@@ -140,6 +141,11 @@ class PluginConfig(ConfigNode):
         self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
 
     @property
+    def napcat_record_source(self) -> str:
+        """读取持久化的 NapCat 音频来源，缺失时保持历史兼容模式。"""
+        return self._data.get("napcat_record_source", "base64")
+
+    @property
     def http_proxy(self) -> str | None:
         return self.proxy or None
 
@@ -150,5 +156,4 @@ class PluginConfig(ConfigNode):
     @property
     def real_song_limit(self) -> int:
         return 1 if "single" in self.select_mode else self.song_limit
-
 

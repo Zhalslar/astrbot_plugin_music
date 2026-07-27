@@ -88,6 +88,16 @@ _🎵 高性能多平台点歌插件 🎵_
 
 > 排在前面的方式优先，发送失败将自动尝试下一种。
 
+**napcat_record_source**
+
+仅对 aiocqhttp（NapCat）的 `record` 语音模式生效，用于避免 AstrBot 将整段
+音频转码为 WAV 后再 Base64 编码进 WebSocket：
+
+- `base64`：兼容模式，保持 AstrBot 默认行为。
+- `url`：把音频 URL 原样交给 NapCat 下载。
+- `local_file`：插件先下载音频，再把绝对路径交给 NapCat。AstrBot 与 NapCat 必须
+  共享该插件缓存所在的 `/AstrBot/data` 挂载；否则 NapCat 无法访问该路径。
+
 ---
 
 ### 🧩 附加功能
@@ -192,4 +202,3 @@ _🎵 高性能多平台点歌插件 🎵_
 ## 📌 注意事项
 
 - 想第一时间得到反馈的可以来作者的插件反馈群（QQ群）：460973561（不点star不给进）
-

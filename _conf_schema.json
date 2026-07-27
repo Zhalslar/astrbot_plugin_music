@@ -116,6 +116,17 @@
             "wecom"
         ]
     },
+    "napcat_record_source": {
+        "description": "NapCat 语音来源",
+        "hint": "仅 aiocqhttp（NapCat）的语音模式有效。base64 保持 AstrBot 默认的转码与编码行为；url 让 NapCat 直接下载音频；local_file 先下载到插件缓存，再将共享的绝对路径交给 NapCat。选择 local_file 前，请确认两个容器共享 /AstrBot/data。",
+        "type": "string",
+        "options": [
+            "base64",
+            "url",
+            "local_file"
+        ],
+        "default": "base64"
+    },
     "file_supported": {
         "description": "支持发文件的消息平台",
         "hint": "此配置定义哪些消息平台支持发送文件消息，不支持的平台发送歌曲时将不采用文件模式",

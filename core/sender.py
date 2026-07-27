@@ -16,6 +16,7 @@ from .config import PluginConfig
 from .downloader import Downloader
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
+from .onebot_record import OneBotRecord
 from .platform import BaseMusicPlayer, TXQQMusic
 from .song_renderer import CardRenderer
 
@@ -219,7 +220,7 @@ class MusicSender:
     async def send_record(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
-        """发语音"""
+        """发送语音，并按 NapCat 配置选择音频来源。"""
         if not song.audio_url:
             song = await player.fetch_extra(song)
         if not song.audio_url:
@@ -227,7 +228,24 @@ class MusicSender:
             return False
         try:
             logger.debug(f"正在发送【{song.name}】音频: {song.audio_url}")
-            seg = Record.fromURL(song.audio_url)
+            if isinstance(event, AiocqhttpMessageEvent):
+                source = self.cfg.napcat_record_source
+                if source == "url":
+                    seg = OneBotRecord(file=song.audio_url)
+                elif source == "local_file":
+                    file_path = await self.downloader.download_song(song.audio_url)
+                    if not file_path:
+                        logger.error(f"【{song.name}】NapCat 本地语音文件下载失败")
+                        return False
+                    seg = OneBotRecord(file=str(file_path.resolve()))
+                elif source == "base64":
+                    seg = Record.fromURL(song.audio_url)
+                else:
+                    raise ValueError(
+                        f"不支持的 NapCat 语音来源配置: {source!r}"
+                    )
+            else:
+                seg = Record.fromURL(song.audio_url)
             await event.send(event.chain_result([seg]))
             return True
         except Exception as e:
