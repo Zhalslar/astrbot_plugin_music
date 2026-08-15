@@ -2,41 +2,46 @@ from enum import IntEnum
 
 
 class SendMode(IntEnum):
-    """歌曲发送模式"""
+    """Song send modes."""
 
     CARD = 1
-    RECORD = 2
-    FILE = 3
-    TEXT = 4
+    RECORD_LINK = 2
+    RECORD_LOCAL = 3
+    FILE_LINK = 4
+    FILE_LOCAL = 5
+    TEXT = 6
 
 
-# 文本模式映射表
+# Mode alias map.
 MODE_MAP_CN: dict[str, SendMode] = {
     "卡片": SendMode.CARD,
-    "语音": SendMode.RECORD,
-    "文件": SendMode.FILE,
+    "语音": SendMode.RECORD_LOCAL,
+    "语音链接": SendMode.RECORD_LINK,
+    "本地语音": SendMode.RECORD_LOCAL,
+    "文件": SendMode.FILE_LOCAL,
+    "文件链接": SendMode.FILE_LINK,
+    "本地文件": SendMode.FILE_LOCAL,
     "文本": SendMode.TEXT,
     "card": SendMode.CARD,
-    "record": SendMode.RECORD,
-    "file": SendMode.FILE,
+    "record": SendMode.RECORD_LOCAL,
+    "record_link": SendMode.RECORD_LINK,
+    "record_local": SendMode.RECORD_LOCAL,
+    "file": SendMode.FILE_LOCAL,
+    "file_link": SendMode.FILE_LINK,
+    "file_local": SendMode.FILE_LOCAL,
     "text": SendMode.TEXT,
 }
 
 
 def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
-    """解析用户选歌输入格式。
+    """Parse the selected song input format.
 
-    支持的格式:
-        - "2"        → 选择第2首，默认模式
-        - "1 2"      → 选择第1首，模式2(语音)
-        - "1 卡片"   → 选择第1首，卡片模式
-        - "1 record" → 选择第1首，语音模式
+    Args:
+        arg: Raw user input after the song name.
 
     Returns:
-        (index, way, error):
-            - index: 歌曲序号（0 表示无法解析）
-            - way: 发送模式（None 表示使用默认）
-            - error: 错误提示（None 表示无错误）
+        A tuple containing the selected index, the chosen send modes, and an
+        optional parsing error message.
     """
     parts = arg.split()
     index = 0
@@ -44,8 +49,10 @@ def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
     modes = None
     mode_map = {
         SendMode.CARD: ["card"],
-        SendMode.RECORD: ["record"],
-        SendMode.FILE: ["file"],
+        SendMode.RECORD_LINK: ["record_link"],
+        SendMode.RECORD_LOCAL: ["record_local"],
+        SendMode.FILE_LINK: ["file_link"],
+        SendMode.FILE_LOCAL: ["file_local"],
         SendMode.TEXT: ["text"],
     }
 
@@ -61,10 +68,14 @@ def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
         # 尝试解析为数字
         if second_part.isdigit():
             mode_value = int(second_part)
-            if 1 <= mode_value <= 4:
+            if 1 <= mode_value <= 6:
                 way = SendMode(mode_value)
             else:
-                return 0, None, "模式数字应为 1-4：1卡片 2语音 3文件 4文本"
+                return (
+                    0,
+                    None,
+                    "模式数字应为 1-6：1卡片 2语音链接 3本地语音 4文件链接 5本地文件 6文本",
+                )
         else:
             # 尝试匹配文本模式
             way = MODE_MAP_CN.get(second_part)
@@ -72,7 +83,9 @@ def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
                 return (
                     0,
                     None,
-                    f"未知模式「{second_part}」，可用模式：卡片/语音/文件/文本 或 1/2/3/4",
+                    "未知模式「"
+                    f"{second_part}」，可用模式：卡片/语音/语音链接/本地语音/文件/文件链接/本地文件/文本 "
+                    "或 1/2/3/4/5/6",
                 )
     modes = mode_map.get(way) if way else None
     return index, modes, None
