@@ -79,10 +79,10 @@
         ],
         "default": [
             "card(卡片模式)",
-            "record_link(语音链接)",
             "record_local(本地语音)",
-            "file_link(文件链接)",
+            "record_link(语音链接)",
             "file_local(本地文件)",
+            "file_link(文件链接)",
             "text(文本模式)"
         ]
     },
