@@ -16,16 +16,6 @@ from astrbot.core.utils.astrbot_path import (
 
 
 class ConfigNode:
-    """
-    配置节点, 把 dict 变成强类型对象。
-
-    规则：
-    - schema 来自子类类型注解
-    - 声明字段：读写，写回底层 dict
-    - 未声明字段和下划线字段：仅挂载属性，不写回
-    - 支持 ConfigNode 多层嵌套（lazy + cache）
-    """
-
     _SCHEMA_CACHE: dict[type, dict[str, type]] = {}
     _FIELDS_CACHE: dict[type, set[str]] = {}
 
@@ -58,7 +48,7 @@ class ConfigNode:
                 continue
             if self._is_optional(tp):
                 continue
-            logger.warning(f"[config:{self.__class__.__name__}] 缺少字段: {key}")
+            logger.warning(f"[config:{self.__class__.__name__}] miss key: {key}")
 
     def __getattr__(self, key: str) -> Any:
         if key in self._fields():
@@ -71,7 +61,7 @@ class ConfigNode:
                     if not isinstance(value, MutableMapping):
                         raise TypeError(
                             f"[config:{self.__class__.__name__}] "
-                            f"字段 {key} 期望 dict，实际是 {type(value).__name__}"
+                            f"key {key} need dict but {type(value).__name__}"
                         )
                     children[key] = tp(value)
                 return children[key]
@@ -90,18 +80,13 @@ class ConfigNode:
         object.__setattr__(self, key, value)
 
     def raw_data(self) -> Mapping[str, Any]:
-        """
-        底层配置 dict 的只读视图
-        """
         return MappingProxyType(self._data)
 
     def save_config(self) -> None:
-        """
-        保存配置到磁盘（仅允许在根节点调用）
-        """
+
         if not isinstance(self._data, AstrBotConfig):
             raise RuntimeError(
-                f"{self.__class__.__name__}.save_config() 只能在根配置节点上调用"
+                f"{self.__class__.__name__}.save_config() only support AstrBotConfig"
             )
         self._data.save_config()
 
@@ -119,7 +104,7 @@ class PluginConfig(ConfigNode):
     enable_lyrics: bool
     proxy: str
     timeout: int
-    timeout_recall: bool
+    recall_select: bool
     clear_cache: bool
     enc_sec_key: str
     enc_params: str

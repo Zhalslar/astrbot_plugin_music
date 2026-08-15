@@ -27,7 +27,6 @@ class MusicPlugin(Star):
         self.keywords: list[str] = []
 
     async def initialize(self):
-        """插件加载时会调用"""
         self._register_player()
         self.downloader = Downloader(self.cfg)
         await self.downloader.initialize()
@@ -38,7 +37,6 @@ class MusicPlugin(Star):
         )
 
     async def terminate(self):
-        """当插件被卸载/停用时会调用"""
         await self.downloader.close()
         for parser in self.players:
             await parser.close()
@@ -110,11 +108,9 @@ class MusicPlugin(Star):
         # 未提输入序号，等待用户选择歌曲
         else:
             title = f"【{player.platform.display_name}】"
-            selection_message_id: int | None = None
 
             async def send_selection():
-                nonlocal selection_message_id
-                selection_message_id = await self.sender.send_song_selection(
+                await self.sender.send_song_selection(
                     event=event, songs=songs, title=title, player=player
                 )
 
@@ -143,8 +139,6 @@ class MusicPlugin(Star):
                 selected_song = songs[index - 1]
                 controller.stop()
                 await self.sender.send_song(event, player, selected_song, modes=modes)
-                if selection_message_id and self.cfg.timeout_recall:
-                    await event.bot.delete_msg(message_id=selection_message_id)  # type: ignore
 
             try:
                 await empty_mention_waiter(event)

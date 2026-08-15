@@ -2,14 +2,19 @@ import base64
 import random
 from io import BytesIO
 
+import botpy.message
+from botpy.http import Route
 from PIL import Image as PILImage
 
 from astrbot.api import logger
 from astrbot.api.event import AstrMessageEvent
-from astrbot.core.message.components import File, Image, Record
+from astrbot.core.message.components import File, Image, Plain, Record
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.sources.aiocqhttp.aiocqhttp_message_event import (
     AiocqhttpMessageEvent,
+)
+from astrbot.core.platform.sources.qqofficial.qqofficial_message_event import (
+    QQOfficialMessageEvent,
 )
 
 from .config import PluginConfig
@@ -32,10 +37,10 @@ class MusicSender:
         self.lyrics_renderer = lyrics_renderer
         self.downloader = downloader
         self.song_renderer = song_renderer
+        self._selection_message_ids: dict[str, str | int] = {}
 
     @staticmethod
     def _format_time(duration_ms):
-        """格式化歌曲时长"""
         duration = duration_ms // 1000
 
         hours = duration // 3600
@@ -46,6 +51,57 @@ class MusicSender:
             return f"{hours}:{minutes:02d}:{seconds:02d}"
         else:
             return f"{minutes:02d}:{seconds:02d}"
+
+    async def _recall_qqofficial_message(
+        self, event: QQOfficialMessageEvent, message_id: str
+    ) -> None:
+        source = event.message_obj.raw_message
+        route_path = None
+        route_params = {}
+
+        if isinstance(source, botpy.message.GroupMessage):
+            route_path = "/v2/groups/{group_openid}/messages/{message_id}"
+            route_params["group_openid"] = source.group_openid
+        elif isinstance(source, botpy.message.C2CMessage):
+            route_path = "/v2/users/{openid}/messages/{message_id}"
+            route_params["openid"] = source.author.user_openid
+        elif isinstance(source, botpy.message.DirectMessage):
+            route_path = "/dms/{guild_id}/messages/{message_id}"
+            route_params["guild_id"] = source.guild_id
+        elif isinstance(source, botpy.message.Message):
+            await event.bot.api.recall_message(
+                channel_id=source.channel_id,
+                message_id=message_id,
+            )
+            return
+
+        if route_path:
+            await event.bot.api._http.request(
+                Route(
+                    "DELETE",
+                    route_path,
+                    message_id=message_id,
+                    **route_params,
+                )
+            )
+
+    @staticmethod
+    def _make_selection_key(event: AstrMessageEvent) -> str:
+        return f"{event.unified_msg_origin}:{event.get_sender_id()}"
+
+    async def _recall_selection_message(self, event: AstrMessageEvent) -> None:
+        key = self._make_selection_key(event)
+        message_id = self._selection_message_ids.pop(key, None)
+        if message_id is None:
+            return
+
+        try:
+            if isinstance(event, AiocqhttpMessageEvent):
+                await event.bot.delete_msg(message_id=int(message_id))
+            elif isinstance(event, QQOfficialMessageEvent):
+                await self._recall_qqofficial_message(event, str(message_id))
+        except Exception as e:
+            logger.warning(f"Failed to recall song selection message: {e}")
 
     @staticmethod
     async def send_msg(event: AiocqhttpMessageEvent, payloads: dict) -> int | None:
@@ -63,10 +119,8 @@ class MusicSender:
         songs: list[Song],
         title: str | None = None,
         player: BaseMusicPlayer | None = None,
-    ) -> int | None:
-        """
-        发送歌曲选择
-        """
+    ) -> str | int | None:
+        """发送歌曲选择"""
         if self.cfg.select_mode == "image":
             return await self._send_song_selection_image(
                 event=event, songs=songs, player=player
@@ -80,19 +134,36 @@ class MusicSender:
             formatted_songs.insert(0, title)
 
         msg = "\n".join(formatted_songs)
+        message_id: str | int | None = None
         if isinstance(event, AiocqhttpMessageEvent):
             payloads = {"message": [{"type": "text", "data": {"text": msg}}]}
-            return await self.send_msg(event, payloads)
+            message_id = await self.send_msg(event, payloads)
+        elif isinstance(event, QQOfficialMessageEvent):
+            platform = getattr(event.bot, "platform", None)
+            if platform is not None:
+                await platform.send_by_session(
+                    event.session,
+                    MessageChain(chain=[Plain(text=msg)]),
+                )
+                message_id = getattr(platform, "_session_last_message_id", {}).get(
+                    event.session_id
+                )
+            else:
+                await event.send(event.plain_result(msg))
+        else:
+            await event.send(event.plain_result(msg))
 
-        await event.send(event.plain_result(msg))
-        return None
+        if message_id is not None:
+            key = self._make_selection_key(event)
+            self._selection_message_ids[key] = message_id
+        return message_id
 
     async def _send_song_selection_image(
         self,
         event: AstrMessageEvent,
         songs: list[Song],
         player: BaseMusicPlayer | None = None,
-    ) -> int | None:
+    ) -> str | int | None:
         song_items = []
         cover_urls: list[str] = []
         for song in songs:
@@ -118,10 +189,28 @@ class MusicSender:
                     }
                 ]
             }
-            return await self.send_msg(event, payloads)
+            message_id = await self.send_msg(event, payloads)
+        elif isinstance(event, QQOfficialMessageEvent):
+            platform = getattr(event.bot, "platform", None)
+            if platform is not None:
+                await platform.send_by_session(
+                    event.session,
+                    MessageChain(chain=[Image.fromBytes(image_bytes)]),
+                )
+                message_id = getattr(platform, "_session_last_message_id", {}).get(
+                    event.session_id
+                )
+            else:
+                await event.send(MessageChain(chain=[Image.fromBytes(image_bytes)]))
+                message_id = None
+        else:
+            await event.send(MessageChain(chain=[Image.fromBytes(image_bytes)]))
+            message_id = None
 
-        await event.send(MessageChain(chain=[Image.fromBytes(image_bytes)]))
-        return None
+        if message_id is not None:
+            key = self._make_selection_key(event)
+            self._selection_message_ids[key] = message_id
+        return message_id
 
     async def _build_cover_map(
         self, cover_urls: list[str]
@@ -365,9 +454,13 @@ class MusicSender:
 
         if not sent:
             await event.send(event.plain_result("歌曲发送失败"))
+            return
 
-        if sent and self.cfg.enable_comments:
+        if self.cfg.recall_select:
+            await self._recall_selection_message(event)
+
+        if self.cfg.enable_comments:
             await self.send_comment(event, player, song)
 
-        if sent and self.cfg.enable_lyrics:
+        if self.cfg.enable_lyrics:
             await self.send_lyrics(event, player, song)
