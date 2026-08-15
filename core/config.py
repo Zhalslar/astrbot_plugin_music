@@ -113,8 +113,8 @@ class PluginConfig(ConfigNode):
     select_mode: str
     cards_per_row: int
     send_modes: list[str]
-    record_supported: list[str]
-    file_supported: list[str]
+    record_unsupported: list[str]
+    file_unsupported: list[str]
     enable_comments: bool
     enable_lyrics: bool
     proxy: str
@@ -150,5 +150,3 @@ class PluginConfig(ConfigNode):
     @property
     def real_song_limit(self) -> int:
         return 1 if "single" in self.select_mode else self.song_limit
-
-

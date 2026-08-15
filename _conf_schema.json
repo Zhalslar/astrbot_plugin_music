@@ -67,90 +67,36 @@
     },
     "send_modes": {
         "description": "发送模式",
-        "hint": "此配置决定发送歌曲方式的优先级, 排在前面的模式优先，发送失败时自动尝试下一种模式。 注意: 卡片模式仅QQ发送网易云音乐时可用, 语音模式、文件模式发送较慢，文本模式将以链接形式发送",
+        "hint": "此配置决定发送歌曲方式的优先级, 排在前面的模式优先，发送失败时自动尝试下一种模式。 注意: 卡片模式仅 aiocqhttp 平台可用, 链接模式发送较快，本地模式会先下载再发送，文本模式将以链接形式发送",
         "type": "list",
         "options": [
             "card(卡片模式)",
-            "record(语音模式)",
-            "file(文件模式)",
+            "record_link(语音链接)",
+            "record_local(本地语音)",
+            "file_link(文件链接)",
+            "file_local(本地文件)",
             "text(文本模式)"
         ],
         "default": [
             "card(卡片模式)",
-            "record(语音模式)",
-            "file(文件模式)",
+            "record_link(语音链接)",
+            "record_local(本地语音)",
+            "file_link(文件链接)",
+            "file_local(本地文件)",
             "text(文本模式)"
         ]
     },
-    "record_supported": {
-        "description": "支持发语音的消息平台",
-        "hint": "此配置定义哪些消息平台支持发送语音消息，不支持的平台发送歌曲时将不采用语音模式",
+    "record_unsupported": {
+        "description": "不支持发语音的消息平台",
+        "hint": "此配置定义哪些消息平台不支持发送语音消息，留空表示所有平台都允许尝试",
         "type": "list",
-        "options": [
-            "aiocqhttp",
-            "dingtalk",
-            "discord",
-            "kook",
-            "lark",
-            "line",
-            "misskey",
-            "qq_official",
-            "qq_official_webhook",
-            "satori",
-            "telegram",
-            "webchat",
-            "wecom",
-            "wecom_ai_bot",
-            "weixin_oc"
-        ],
-        "default": [
-            "aiocqhttp",
-            "dingtalk",
-            "lark",
-            "line",
-            "qq_official",
-            "qq_official_webhook",
-            "satori",
-            "telegram",
-            "webchat",
-            "wecom"
-        ]
+        "default": []
     },
-    "file_supported": {
-        "description": "支持发文件的消息平台",
-        "hint": "此配置定义哪些消息平台支持发送文件消息，不支持的平台发送歌曲时将不采用文件模式",
+    "file_unsupported": {
+        "description": "不支持发文件的消息平台",
+        "hint": "此配置定义哪些消息平台不支持发送文件消息，留空表示所有平台都允许尝试",
         "type": "list",
-        "options": [
-            "aiocqhttp",
-            "dingtalk",
-            "discord",
-            "kook",
-            "lark",
-            "line",
-            "misskey",
-            "qq_official",
-            "qq_official_webhook",
-            "satori",
-            "telegram",
-            "webchat",
-            "wecom",
-            "wecom_ai_bot",
-            "weixin_oc"
-        ],
-        "default": [
-            "aiocqhttp",
-            "discord",
-            "dingtalk",
-            "lark",
-            "line",
-            "misskey",
-            "qq_official",
-            "qq_official_webhook",
-            "satori",
-            "telegram",
-            "webchat",
-            "weixin_oc"
-        ]
+        "default": []
     },
     "enable_comments": {
         "description": "是否启用评论",
