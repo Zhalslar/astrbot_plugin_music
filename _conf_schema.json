@@ -127,9 +127,9 @@
         },
         "default": 30
     },
-    "timeout_recall": {
+    "recall_select": {
         "description": "撤回选歌消息",
-        "hint": "达到超时时长后，撤回之前发送的选歌消息 (仅 aiocqhttp 平台支持)",
+        "hint": "点歌成功后，撤回之前发送的选歌消息",
         "type": "bool",
         "default": true
     },
