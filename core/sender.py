@@ -41,6 +41,7 @@ from .lyrics_renderer import LyricsRenderer
 from .model import Song
 from .platform import BaseMusicPlayer, TXQQMusic
 from .song_renderer import CardRenderer
+from .card_sender import send_card_via_cz
 
 
 class MusicSender:
@@ -456,45 +457,9 @@ class MusicSender:
     async def _send_card(
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
-        """发卡片"""
-        if isinstance(player, TXQQMusic):
-            if not song.audio_url or not song.cover_url:
-                song = await player.fetch_extra(song)
-
-            payloads: dict = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "custom",
-                            "url": song.audio_url or "",
-                            "audio": song.audio_url or "",
-                            "title": song.name or "",
-                            "image": song.cover_url or "",
-                            "singer": song.artists or "",
-                        },
-                    }
-                ]
-            }
-        else:
-            payloads = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "163",
-                            "id": song.id,
-                        },
-                    }
-                ]
-            }
-        try:
-            await self.send_msg(event, payloads)
-            return True
-        except Exception as e:
-            logger.error(e)
-            await event.send(event.plain_result(str(e)))
-            return False
+        """发卡片 — 通过 CZ API 签名 Ark JSON 发送"""
+        ckey = getattr(self.cfg, "qingmeng_ckey", "") or ""
+        return await send_card_via_cz(event, player, song, ckey)
 
     async def _send_record_link(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song

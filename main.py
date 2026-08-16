@@ -129,6 +129,9 @@ class MusicPlugin(Star):
             controller: SessionController, event: AstrMessageEvent
         ):
             arg = event.message_str.strip()
+            # 过滤机器人自己发的歌单消息，避免吞掉用户真正的数字输入
+            if "请选择歌曲" in arg or "请选择" in arg or len(arg) > 80:
+                return
             arg_lower = arg.lower()
             for kw in self.keywords:
                 if kw in arg_lower:

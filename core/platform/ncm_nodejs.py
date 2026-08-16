@@ -75,27 +75,54 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         return song
 
     async def fetch_extra(self, song: Song) -> Song:
-        try:
-            result = await self._request(
-                url=f"{self.cfg.nodejs_base_url}/song/url?id={song.id}",
-                method="GET",
-            )
-            if not isinstance(result, dict):
-                logger.error(f"返回了意料之外数据：{result}")
-                return song
-        except Exception as e:
-            logger.warning(f"{self.__class__.__name__} fetch_extra 失败: {e}")
-            return song
+        """快速解析音频 + 补封面，并行执行。"""
+        import asyncio
+        import time
 
-        # NodeJS API 返回结构示例:
-        # { "data": [ { "url": "...", ... } ] }
-        data = result.get("data")
-        if not data:
-            return song
+        async def _resolve_audio():
+            # 1. meting API 快速获取（通常 <2秒）
+            try:
+                url = f"https://api.qijieya.cn/meting/?type=song&id={song.id}&_t={time.time()}"
+                result = await self._request(url)
+                if result and isinstance(result, list) and len(result) > 0:
+                    data = result[0]
+                    u = data.get("url")
+                    if u:
+                        song.audio_url = u
+                        logger.debug(f"meting 补全完成: {song.name}")
+                        return
+            except Exception as e:
+                logger.debug(f"meting 补全失败: {e}")
+            # 2. 回落 NodeJS /song/url
+            try:
+                result = await self._request(
+                    url=f"{self.cfg.nodejs_base_url}/song/url?id={song.id}&_t={time.time()}",
+                    method="GET",
+                )
+                if isinstance(result, dict):
+                    data = result.get("data")
+                    if data:
+                        audio_url = data[0].get("url")
+                        if audio_url:
+                            song.audio_url = audio_url
+            except Exception as e:
+                logger.warning(f"song/url 回落失败: {e}")
 
-        info = data[0]
-        audio_url = info.get("url")
-        if audio_url and song.audio_url is None:
-            song.audio_url = audio_url
+        async def _fetch_cover():
+            if song.cover_url:
+                return
+            try:
+                detail = await self._request(
+                    url=f"{self.cfg.nodejs_base_url}/song/detail?ids={song.id}&_t={time.time()}",
+                    method="GET",
+                )
+                if isinstance(detail, dict) and detail.get("songs"):
+                    info = detail["songs"][0]
+                    al = info.get("al", {})
+                    if al.get("picUrl"):
+                        song.cover_url = al["picUrl"]
+            except Exception as e:
+                logger.debug(f"song/detail 获取封面失败: {e}")
 
+        await asyncio.gather(_resolve_audio(), _fetch_cover())
         return song
