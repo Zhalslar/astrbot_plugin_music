@@ -95,7 +95,7 @@ class PluginConfig(ConfigNode):
     default_player_name: str
     nodejs_base_url: str
     song_limit: int
-    select_mode: str
+    select_modes: list[str]
     cards_per_row: int
     send_modes: list[str]
     record_unsupported: list[str]
@@ -122,7 +122,12 @@ class PluginConfig(ConfigNode):
         self.songs_dir = self.data_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
 
+        self._select_modes = [m.split("(", 1)[0].strip() for m in self.select_modes]
         self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
+
+    @property
+    def real_select_modes(self) -> list[str]:
+        return self._select_modes
 
     @property
     def http_proxy(self) -> str | None:
@@ -134,4 +139,8 @@ class PluginConfig(ConfigNode):
 
     @property
     def real_song_limit(self) -> int:
-        return 1 if "single" in self.select_mode else self.song_limit
+        return (
+            1
+            if self._select_modes and self._select_modes[0] == "single"
+            else self.song_limit
+        )

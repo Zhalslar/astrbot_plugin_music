@@ -1,4 +1,3 @@
-import asyncio
 import traceback
 
 from astrbot.api import logger
@@ -22,19 +21,24 @@ from .core.utils import parse_user_input
 class MusicPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
+        self.context = context
         self.cfg = PluginConfig(config, context)
+        self.lyrics_renderer = LyricsRenderer(self.cfg)
+        self.song_renderer = CardRenderer(self.cfg)
+        self.downloader = Downloader(self.cfg)
+        self.sender = MusicSender(
+            self.cfg,
+            self.context,
+            self.lyrics_renderer,
+            self.downloader,
+            self.song_renderer,
+        )
         self.players: list[BaseMusicPlayer] = []
         self.keywords: list[str] = []
 
     async def initialize(self):
         self._register_player()
-        self.downloader = Downloader(self.cfg)
         await self.downloader.initialize()
-        self.lyrics_renderer = LyricsRenderer(self.cfg)
-        self.song_renderer = CardRenderer(self.cfg)
-        self.sender = MusicSender(
-            self.cfg, self.lyrics_renderer, self.downloader, self.song_renderer
-        )
 
     async def terminate(self):
         await self.downloader.close()
@@ -104,49 +108,54 @@ class MusicPlugin(Star):
         if index and 0 <= index <= len(songs):
             selected_song = songs[int(index) - 1]
             await self.sender.send_song(event, player, selected_song)
+            event.stop_event()
+            return
 
         # 未提输入序号，等待用户选择歌曲
-        else:
-            title = f"【{player.platform.display_name}】"
+        selection_mode = await self.sender.send_song_selection(
+            event=event, songs=songs, player=player
+        )
 
-            async def send_selection():
-                await self.sender.send_song_selection(
-                    event=event, songs=songs, title=title, player=player
-                )
+        if selection_mode == "button":
+            event.stop_event()
+            return
+        if selection_mode not in {"image", "text"}:
+            self.sender.clear_selection_context(event)
+            event.stop_event()
+            return
 
-            asyncio.create_task(send_selection())
-
-            @session_waiter(timeout=self.cfg.timeout)
-            async def empty_mention_waiter(
-                controller: SessionController, event: AstrMessageEvent
-            ):
-                arg = event.message_str.strip()
-                arg_lower = arg.lower()
-                for kw in self.keywords:
-                    if kw in arg_lower:
-                        controller.stop()
-                        return
-                # 解析输入格式
-                index, modes, error = parse_user_input(arg)
-                if error:
-                    await event.send(event.plain_result(error))
-                    return
-                if index == 0:
-                    return
-                if index < 1 or index > len(songs):
+        @session_waiter(timeout=self.cfg.timeout)
+        async def empty_mention_waiter(
+            controller: SessionController, event: AstrMessageEvent
+        ):
+            arg = event.message_str.strip()
+            arg_lower = arg.lower()
+            for kw in self.keywords:
+                if kw in arg_lower:
                     controller.stop()
                     return
-                selected_song = songs[index - 1]
+            # 解析输入格式
+            index, modes, error = parse_user_input(arg)
+            if error:
+                await event.send(event.plain_result(error))
+                return
+            if index == 0:
+                return
+            if index < 1 or index > len(songs):
                 controller.stop()
-                await self.sender.send_song(event, player, selected_song, modes=modes)
+                return
+            selected_song = songs[index - 1]
+            controller.stop()
+            await self.sender.send_song(event, player, selected_song, modes=modes)
 
-            try:
-                await empty_mention_waiter(event)
-            except TimeoutError as _:
-                yield event.plain_result("点歌超时！")
-            except Exception as e:
-                logger.error(traceback.format_exc())
-                logger.error("点歌发生错误" + str(e))
+        try:
+            await empty_mention_waiter(event)
+        except TimeoutError as _:
+            self.sender.clear_selection_context(event)
+            yield event.plain_result("点歌超时！")
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            logger.error("点歌发生错误" + str(e))
 
         event.stop_event()
 
