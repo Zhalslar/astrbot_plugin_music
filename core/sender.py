@@ -36,6 +36,7 @@ from astrbot.core.platform.sources.qqofficial.qqofficial_platform_adapter import
 from astrbot.core.star.context import Context
 
 from .config import PluginConfig
+from .cz_card import CZCard
 from .downloader import Downloader
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
@@ -57,11 +58,16 @@ class MusicSender:
         self.lyrics_renderer = lyrics_renderer
         self.downloader = downloader
         self.song_renderer = song_renderer
+        self.cz_card = CZCard(config)
         self._selection_message_ids: dict[str, str | int] = {}
         self._selection_contexts: dict[str, dict[str, Any]] = {}
         self._selection_context_ids: dict[str, str] = {}
         self._interaction_clients: set[int] = set()
         self.interaction_created: bool = False
+
+    async def close(self) -> None:
+        """Release resources owned by the sender."""
+        await self.cz_card.close()
 
     def set_interaction_create(self):
         if self.interaction_created:
@@ -244,7 +250,7 @@ class MusicSender:
     ) -> str | int | None:
         lins = [f"【{player.platform.display_name}】"]
         for index, song in enumerate(songs):
-            lins.append(f"{index + 1}. {song.title} - {song.artists}")
+            lins.append(f"{index + 1}. {song.name} - {song.artists or song.author}")
         msg = "\n".join(lins)
         message_id: str | int | None = None
         if isinstance(event, AiocqhttpMessageEvent):
@@ -496,6 +502,22 @@ class MusicSender:
             await event.send(event.plain_result(str(e)))
             return False
 
+    async def _send_cz_card(
+        self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
+    ) -> bool:
+        """使用 CZ 音乐签名发卡片"""
+        ark = await self.cz_card.fetch(player, song)
+        if not ark:
+            return False
+        data = json.dumps(ark, ensure_ascii=False)
+        payloads = {"message": [{"type": "json", "data": {"data": data}}]}
+        try:
+            await self.send_msg(event, payloads)
+            return True
+        except Exception as exc:
+            logger.warning(f"CZ 音乐签名卡片发送失败: {type(exc).__name__}")
+            return False
+
     async def _send_record_link(
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
@@ -566,14 +588,13 @@ class MusicSender:
         self, event: AstrMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发文本"""
+        if not song.audio_url:
+            return False
         try:
-            info = f"🎶{song.name} - {song.artists} {self._format_time(song.duration)}"
-            song = await player.fetch_extra(song)
-            info = song.to_lines()
-            await event.send(event.plain_result(info))
+            await event.send(event.plain_result(song.audio_url))
             return True
         except Exception as e:
-            logger.error(f"发送歌曲信息失败: {e}")
+            logger.error(f"文本模式发送歌曲失败: {e}")
             return False
 
     async def send_comment(
@@ -614,6 +635,7 @@ class MusicSender:
     def _get_sender(self, mode: str):
         return {
             "card": self._send_card,
+            "cz_card": self._send_cz_card,
             "record_link": self._send_record_link,
             "record_local": self._send_record_local,
             "file_link": self._send_file_link,
@@ -627,6 +649,8 @@ class MusicSender:
             case "text":
                 return True
             case "card":
+                return platform == "aiocqhttp"
+            case "cz_card":
                 return platform == "aiocqhttp"
             case "record_link" | "record_local":
                 return platform not in self.cfg.record_unsupported
