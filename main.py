@@ -41,6 +41,7 @@ class MusicPlugin(Star):
         await self.downloader.initialize()
 
     async def terminate(self):
+        await self.sender.close()
         await self.downloader.close()
         for parser in self.players:
             await parser.close()

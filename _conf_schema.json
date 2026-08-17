@@ -50,8 +50,8 @@
         ],
         "default": [
             "button(按钮模式)",
-            "image(图片模式)",
-            "text(文本模式)"
+            "text(文本模式)",
+            "image(图片模式)"
         ]
     },
     "cards_per_row": {
@@ -63,7 +63,7 @@
             "max": 5,
             "step": 1
         },
-        "default": 2
+        "default": 3
     },
     "send_modes": {
         "description": "发送模式",
@@ -71,6 +71,7 @@
         "type": "list",
         "options": [
             "card(卡片模式)",
+            "cz_card(CZ卡片)",
             "record_link(语音链接)",
             "record_local(本地语音)",
             "file_link(文件链接)",
@@ -79,12 +80,20 @@
         ],
         "default": [
             "card(卡片模式)",
+            "cz_card(CZ卡片)",
             "record_local(本地语音)",
             "record_link(语音链接)",
             "file_local(本地文件)",
             "file_link(文件链接)",
             "text(文本模式)"
         ]
+    },
+    "cz_ckey": {
+        "description": "CZ API ckey",
+        "hint": "选填，填写后可提升 CZ 站点提供的音乐签名接口额度",
+        "type": "string",
+        "obvious_hint": true,
+        "default": ""
     },
     "record_unsupported": {
         "description": "不支持发语音的消息平台",

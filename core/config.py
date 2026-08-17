@@ -98,6 +98,7 @@ class PluginConfig(ConfigNode):
     select_modes: list[str]
     cards_per_row: int
     send_modes: list[str]
+    cz_ckey: str
     record_unsupported: list[str]
     file_unsupported: list[str]
     enable_comments: bool
