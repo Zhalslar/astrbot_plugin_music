@@ -90,9 +90,8 @@
     },
     "cz_ckey": {
         "description": "CZ API ckey",
-        "hint": "选填，填写后可提升 CZ 站点提供的音乐签名接口额度",
+        "hint": "选填，填写后可提升 CZ 站点提供的音乐签名接口额度，站点地址：https://api.czcn.xyz",
         "type": "string",
-        "obvious_hint": true,
         "default": ""
     },
     "record_unsupported": {
