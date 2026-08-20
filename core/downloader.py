@@ -1,4 +1,3 @@
-import shutil
 import uuid
 from pathlib import Path
 
@@ -18,20 +17,8 @@ class Downloader:
         self.songs_dir = self.cfg.songs_dir
         self.session = aiohttp.ClientSession(proxy=self.cfg.http_proxy)
 
-
-    async def initialize(self):
-        if self.cfg.clear_cache:
-            self._ensure_cache_dir()
-
     async def close(self):
         await self.session.close()
-
-    def _ensure_cache_dir(self) -> None:
-        """重建缓存目录：存在则清空，不存在则新建"""
-        if self.songs_dir.exists():
-            shutil.rmtree(self.songs_dir)
-        self.songs_dir.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"缓存目录已重建：{self.songs_dir}")
 
     async def download_image(self, url: str, close_ssl: bool = True) -> bytes | None:
         """下载图片"""
@@ -45,6 +32,7 @@ class Downloader:
 
     async def download_song(self, url: str) -> Path | None:
         """下载歌曲，返回保存路径"""
+        self.songs_dir.mkdir(parents=True, exist_ok=True)
         song_uuid = uuid.uuid4().hex
         file_path = self.songs_dir / f"{song_uuid}.mp3"
         try:

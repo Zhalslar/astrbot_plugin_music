@@ -10,8 +10,8 @@ from astrbot.api import logger
 from astrbot.core.config.astrbot_config import AstrBotConfig
 from astrbot.core.star.context import Context
 from astrbot.core.utils.astrbot_path import (
-    get_astrbot_plugin_data_path,
     get_astrbot_plugin_path,
+    get_astrbot_temp_path,
 )
 
 
@@ -115,12 +115,10 @@ class PluginConfig(ConfigNode):
     def __init__(self, config: AstrBotConfig, context: Context):
         super().__init__(config)
         self.context = context
-
-        self.font_path = (
-            Path(get_astrbot_plugin_path()) / self._plugin_name / "fonts" / "simhei.ttf"
-        )
-        self.data_dir = Path(get_astrbot_plugin_data_path()) / self._plugin_name
-        self.songs_dir = self.data_dir / "songs"
+        self.plugin_dir = Path(get_astrbot_plugin_path()) / self._plugin_name
+        self.font_path = self.plugin_dir / "fonts" / "simhei.ttf"
+        self.temp_dir = Path(get_astrbot_temp_path()) / self._plugin_name
+        self.songs_dir = self.temp_dir / "songs"
         self.songs_dir.mkdir(parents=True, exist_ok=True)
 
         self._select_modes = [m.split("(", 1)[0].strip() for m in self.select_modes]
