@@ -26,7 +26,6 @@ class LyricsRenderer:
         config: PluginConfig,
         theme: LyricsTheme | None = None,
     ):
-        self.cfg = config
         self.theme = theme or LyricsTheme()
         self.font_path = config.font_path
         self.font = self.theme.load_font(str(self.font_path))
