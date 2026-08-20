@@ -141,6 +141,12 @@
         "type": "bool",
         "default": true
     },
+    "clear_cache": {
+        "description": "重载插件时清空缓存",
+        "hint": "文件模式下需要下载音频文件，缓存目录在data/plugin_data/astrbot_plugin_music/songs，此选项用于重载插件时是否清空缓存",
+        "type": "bool",
+        "default": true
+    },
     "enc_sec_key": {
         "description": "网易云野生密钥",
         "hint": "",

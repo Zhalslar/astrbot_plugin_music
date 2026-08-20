@@ -38,6 +38,7 @@ class MusicPlugin(Star):
 
     async def initialize(self):
         self._register_player()
+        await self.downloader.initialize()
 
     async def terminate(self):
         await self.sender.close()
@@ -70,29 +71,6 @@ class MusicPlugin(Star):
             self.players.append(player)
             self.keywords.extend(player.platform.keywords)
         logger.debug(f"已注册触发词：{self.keywords}")
-
-    @filter.command(
-        "点歌",
-        alias={
-            "网易点歌",
-            "网易nj",
-            "QQ点歌",
-            "酷狗点歌",
-            "酷我点歌",
-            "百度点歌",
-            "咪咕点歌",
-            "荔枝点歌",
-            "蜻蜓点歌",
-            "喜马拉雅",
-            "5sing原创",
-            "5sing翻唱",
-            "全民K歌",
-        },
-    )
-    async def search_song(self, event: AstrMessageEvent):
-        """点歌、网易点歌、网易nj、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌 <搜索词>"""
-        # 此函数仅用于注册显示命令
-        pass
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_search_song(self, event: AstrMessageEvent):
@@ -213,26 +191,16 @@ class MusicPlugin(Star):
             return "歌词获取或发送失败"
 
     @filter.llm_tool()
-    async def play_song_by_name(
-        self, event: AstrMessageEvent, song_name: str, platform: str = ""
-    ):
-        """当用户想听歌时，根据歌名（可含歌手）搜索并播放音乐。
-
+    async def play_song_by_name(self, event: AstrMessageEvent, song_name: str):
+        """
+        当用户想听歌时，根据歌名（可含歌手）搜索并播放音乐。
         Args:
             song_name(string): 歌曲名称或包含歌手的关键词
-            platform(string): 点歌平台，默认可不填，使用默认播放器。可填写（严格匹配）：网易点歌、网易nj、QQ点歌、酷狗点歌、酷我点歌、百度点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌。
         """
-
-        player = (
-            self.get_player(name=platform)
-            if platform
-            else self.get_player(default=True)
-        )
+        player = self.get_player(default=True)
         if not player:
-            return f"无可用播放器：{platform}" if platform else "无可用播放器"
-        songs = await player.fetch_songs(
-            keyword=song_name, limit=1, extra=platform or None
-        )
+            return "无可用播放器"
+        songs = await player.fetch_songs(keyword=song_name, limit=1)
         if not songs:
             return "没找到相关歌曲"
         await self.sender.send_song(event, player, songs[0])
