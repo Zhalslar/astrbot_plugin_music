@@ -91,7 +91,6 @@
         "description": "签名卡片 API key",
         "hint": "签名卡片服务的用户令牌。请自行填写，当前版本推荐使用的站点地址：https://apii.xianyuw.cn，注册后在用户中心复制API令牌填在此处",
         "type": "string",
-        "invisible": true,
         "default": ""
     },
     "record_unsupported": {
