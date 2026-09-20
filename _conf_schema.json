@@ -71,7 +71,7 @@
         "type": "list",
         "options": [
             "card(卡片模式)",
-            "cz_card(CZ卡片)",
+            "ark_card(签名卡片)",
             "record_link(语音链接)",
             "record_local(本地语音)",
             "file_link(文件链接)",
@@ -79,8 +79,7 @@
             "text(文本模式)"
         ],
         "default": [
-            "card(卡片模式)",
-            "cz_card(CZ卡片)",
+            "ark_card(签名卡片)",
             "record_local(本地语音)",
             "record_link(语音链接)",
             "file_local(本地文件)",
@@ -88,10 +87,11 @@
             "text(文本模式)"
         ]
     },
-    "cz_ckey": {
-        "description": "CZ API ckey",
-        "hint": "选填，填写后可提升 CZ 站点提供的音乐签名接口额度，站点地址：https://api.czcn.xyz",
+    "ark_key": {
+        "description": "签名卡片 API key",
+        "hint": "签名卡片服务的用户令牌。请自行填写，当前版本推荐使用的站点地址：https://apii.xianyuw.cn，注册后在用户中心复制API令牌填在此处",
         "type": "string",
+        "invisible": true,
         "default": ""
     },
     "record_unsupported": {
