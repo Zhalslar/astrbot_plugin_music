@@ -20,7 +20,7 @@ class Downloader:
     async def close(self):
         await self.session.close()
 
-    async def download_image(self, url: str, close_ssl: bool = True) -> bytes | None:
+    async def download_image(self, url: str, close_ssl: bool = False) -> bytes | None:
         """下载图片"""
         url = url.replace("https://", "http://") if close_ssl else url
         try:

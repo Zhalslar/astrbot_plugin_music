@@ -4,7 +4,7 @@ from io import BytesIO
 from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont
 
-from astrbot import logger
+from astrbot.api import logger
 
 from .config import PluginConfig
 from .model import Song
