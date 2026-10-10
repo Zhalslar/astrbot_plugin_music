@@ -205,12 +205,12 @@ class MusicSender:
             await interaction._api.on_interaction_result(interaction.id, 3)
             return True
 
-        await interaction._api.on_interaction_result(interaction.id, 0)
         context["handled"] = True
         songs = context["songs"]
         if index < 1 or index > len(songs):
             return True
         self.clear_selection_context(event)
+        await interaction._api.on_interaction_result(interaction.id, 0)
         asyncio.create_task(
             self.send_song(
                 event,
