@@ -180,7 +180,6 @@ class MusicSender:
         if not getattr(resolved, "button_id", "").startswith("music_song_selection_"):
             return False
 
-        await interaction._api.on_interaction_result(interaction.id, 0)
         button_data = getattr(resolved, "button_data", "") or ""
         try:
             payload = json.loads(button_data)
@@ -195,12 +194,15 @@ class MusicSender:
         except (TypeError, ValueError):
             return True
         context = self._selection_contexts.get(selection_id)
+        # 3 = 重复操作：选歌已处理或已过期
         if context is None or context.get("handled"):
+            await interaction._api.on_interaction_result(interaction.id, 3)
             return True
 
         event = context["event"]
         selection_key = self._make_selection_key(event)
         if self._selection_context_ids.get(selection_key) != selection_id:
+            await interaction._api.on_interaction_result(interaction.id, 3)
             return True
 
         context["handled"] = True
@@ -208,6 +210,7 @@ class MusicSender:
         if index < 1 or index > len(songs):
             return True
         self.clear_selection_context(event)
+        await interaction._api.on_interaction_result(interaction.id, 0)
         asyncio.create_task(
             self.send_song(
                 event,
