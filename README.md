@@ -35,6 +35,11 @@ _🎵 高性能多平台点歌插件 🎵_
 
 ---
 
+## 效果展示图
+
+<img width="8192" height="3342" alt="music插件展示" src="https://github.com/user-attachments/assets/a90683ec-4107-4882-91ff-a2a318c5f0a1" />
+
+
 ## ⚙️ 配置说明
 
 请前往 **AstrBot 插件配置面板**进行设置。
