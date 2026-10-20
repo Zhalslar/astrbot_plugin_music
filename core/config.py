@@ -109,6 +109,8 @@ class PluginConfig(ConfigNode):
     clear_cache: bool
     enc_sec_key: str
     enc_params: str
+    qqmusic_uin: str
+    qqmusic_cookie: str
 
     _plugin_name: str = "astrbot_plugin_music"
 

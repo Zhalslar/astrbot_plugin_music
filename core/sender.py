@@ -40,7 +40,7 @@ from .config import PluginConfig
 from .downloader import Downloader
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
-from .platform import BaseMusicPlayer, TXQQMusic
+from .platform import BaseMusicPlayer, QQMusicOfficial, TXQQMusic
 from .song_renderer import CardRenderer
 
 
@@ -466,7 +466,28 @@ class MusicSender:
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发卡片"""
-        if isinstance(player, TXQQMusic):
+        if isinstance(player, QQMusicOfficial):
+            if not song.audio_url or not song.cover_url:
+                song = await player.fetch_extra(song)
+
+            mid = song.note or song.id
+            jump_url = f"https://y.qq.com/n/ryqq/songDetail/{mid}"
+            if song.audio_url:
+                music_data = {
+                    "type": "custom",
+                    "url": jump_url,
+                    "audio": song.audio_url,
+                    "title": song.name or "",
+                    "content": song.artists or "",
+                    "image": song.cover_url or "",
+                }
+            else:
+                music_data = {
+                    "type": "qq",
+                    "id": song.id,
+                }
+            payloads: dict = {"message": [{"type": "music", "data": music_data}]}
+        elif isinstance(player, TXQQMusic):
             if not song.audio_url or not song.cover_url:
                 song = await player.fetch_extra(song)
 
@@ -669,9 +690,13 @@ class MusicSender:
         song: Song,
         modes: list[str] | None = None,
     ):
+        target_modes = modes if modes is not None else self.cfg.real_send_modes
+        needs_audio = any(m not in ("card", "text") for m in target_modes)
+
         if not song.audio_url or not song.cover_url:
             song = await player.fetch_extra(song)
-        if not song.audio_url:
+
+        if needs_audio and not song.audio_url and target_modes and target_modes[0] != "card":
             await event.send(event.plain_result(f"【{song.name}】音频获取失败"))
             return
 

@@ -10,7 +10,7 @@ from .base import BaseMusicPlayer
 Txqq音乐聚合平台
 
 支持的平台：
-- qq: QQ 音乐
+- txqq: QQ 音乐
 - netease: 网易云音乐
 - kugou: 酷狗音乐
 - kuwo: 酷我音乐
@@ -40,7 +40,7 @@ class TXQQMusic(BaseMusicPlayer):
         name="txqq",
         display_name="TXQQ聚合平台",
         keywords=[
-            "qq点歌",
+            "txqq",
             "酷狗点歌",
             "酷我点歌",
             "百度点歌",
@@ -56,7 +56,7 @@ class TXQQMusic(BaseMusicPlayer):
     )
 
     PLATFORM_MAP = {
-        "qq": ["qq"],
+        "qq": ["txqq"],
         "kugou": ["酷狗"],
         "kuwo": ["酷我"],
         "baidu": ["百度"],

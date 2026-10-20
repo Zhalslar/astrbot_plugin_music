@@ -7,6 +7,7 @@
             "网易点歌",
             "nj点歌",
             "QQ点歌",
+            "txqq",
             "酷狗点歌",
             "酷我点歌",
             "百度点歌",
@@ -139,6 +140,18 @@
         "hint": "点歌成功后，撤回之前发送的选歌消息",
         "type": "bool",
         "default": true
+    },
+    "qqmusic_uin": {
+        "description": "QQ音乐绑定QQ号",
+        "hint": "使用QQ音乐时需填。绿钻绑定的QQ号（uin），用于绿钻直链解析鉴权",
+        "type": "string",
+        "default": ""
+    },
+    "qqmusic_cookie": {
+        "description": "QQ音乐绿钻Cookie",
+        "hint": "使用QQ音乐时需填。填入网页端QQ音乐Cookie",
+        "type": "text",
+        "default": ""
     },
     "enc_sec_key": {
         "description": "网易云野生密钥",
