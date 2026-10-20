@@ -2,7 +2,6 @@ import asyncio
 import gzip
 import json
 import urllib.request
-from pathlib import Path
 from typing import Any, ClassVar
 
 from astrbot.api import logger
@@ -63,16 +62,6 @@ class QQMusicOfficial(BaseMusicPlayer):
 
     def _get_cookie(self) -> str:
         cookie = (self.cfg.qqmusic_cookie or "").strip()
-        if not cookie:
-            cookie_file = (self.cfg.qqmusic_cookie_file or "").strip()
-            if not cookie_file:
-                return ""
-            try:
-                cookie = Path(cookie_file).read_text(encoding="utf-8").strip()
-            except OSError as exc:
-                logger.warning(f"Failed to read QQ Music cookie file: {exc}")
-                return ""
-
         values = self._cookie_values(cookie)
         if values.get("qqmusic_key") or values.get("qm_keyst"):
             return cookie
