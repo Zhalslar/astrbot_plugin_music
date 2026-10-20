@@ -16,6 +16,7 @@ class ArkCard:
     API_URL = "https://apii.xianyuw.cn/api/v1/qq-musicArk"
     FORMAT_MAP = {
         "qq": "qq",
+        "qqmusic": "qq",
         "txqq": "qq",
         "netease": "netease",
         "netease_nodejs": "netease",
@@ -66,7 +67,7 @@ class ArkCard:
         Returns:
             The signed card payload, or None when the request fails.
         """
-        if not song.audio_url or not song.cover_url:
+        if not song.audio_url:
             logger.warning(f"Ark card is missing required song data: {song.name}")
             return None
         singer = song.artists or song.author or "Unknown artist"
@@ -77,7 +78,9 @@ class ArkCard:
             logger.warning(f"Ark card does not support music source: {source}")
             return None
 
-        cover_url = await self._resolve_cover_url(song.cover_url)
+        if not song.cover_url:
+            song = await player.fetch_extra(song)
+        cover_url = await self._resolve_cover_url(song.cover_url) if song.cover_url else ""
 
         params = {
             "key": self.key,
