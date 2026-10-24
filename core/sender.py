@@ -40,7 +40,7 @@ from .ark_card import ArkCard
 from .config import PluginConfig
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
-from .platform import BaseMusicPlayer, NekoMusic, QQMusicOfficial, TXQQMusic
+from .platform import BaseMusicPlayer, QQMusicOfficial, TXQQMusic
 from .song_renderer import CardRenderer
 
 
@@ -473,77 +473,34 @@ class MusicSender:
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发卡片"""
-        if isinstance(player, NekoMusic):
-            if not song.audio_url:
-                song = await player.fetch_extra(song)
-
-            payloads: dict = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "custom",
-                            "url": f"{player.base_url}/detail/{song.id}",
-                            "audio": song.audio_url or "",
-                            "title": song.name or "",
-                            "content": song.artists or "",
-                            "image": song.cover_url or "",
-                        },
-                    }
-                ]
-            }
-        elif isinstance(player, QQMusicOfficial):
-            if not song.audio_url or not song.cover_url:
-                song = await player.fetch_extra(song)
-
-            mid = song.note or song.id
-            jump_url = f"https://y.qq.com/n/ryqq/songDetail/{mid}"
+        music_data: dict = {
+            "type": "custom",
+            "audio": song.audio_url or "",
+            "title": song.name or "",
+            "image": song.cover_url or "",
+        }
+        if isinstance(player, QQMusicOfficial):
             if song.audio_url:
-                music_data = {
-                    "type": "custom",
-                    "url": jump_url,
-                    "audio": song.audio_url,
-                    "title": song.name or "",
-                    "content": song.artists or "",
-                    "image": song.cover_url or "",
-                }
+                mid = song.note or song.id
+                music_data.update(
+                    {
+                        "url": f"https://y.qq.com/n/ryqq/songDetail/{mid}",
+                        "content": song.artists or "",
+                    }
+                )
             else:
-                music_data = {
-                    "type": "qq",
-                    "id": song.id,
-                }
-            payloads: dict = {"message": [{"type": "music", "data": music_data}]}
+                music_data = {"type": "qq", "id": song.id}
         elif isinstance(player, TXQQMusic):
-            if not song.audio_url or not song.cover_url:
-                song = await player.fetch_extra(song)
-
-            payloads: dict = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "custom",
-                            "url": song.audio_url or "",
-                            "audio": song.audio_url or "",
-                            "title": song.name or "",
-                            "image": song.cover_url or "",
-                            "singer": song.artists or "",
-                        },
-                    }
-                ]
-            }
+            music_data.update(
+                {
+                    "url": song.audio_url or "",
+                    "singer": song.artists or "",
+                }
+            )
         else:
-            payloads = {
-                "message": [
-                    {
-                        "type": "music",
-                        "data": {
-                            "type": "163",
-                            "id": song.id,
-                        },
-                    }
-                ]
-            }
+            music_data = {"type": "163", "id": song.id}
+
+        payloads = {"message": [{"type": "music", "data": music_data}]}
         try:
             await self.send_msg(event, payloads)
             return True
