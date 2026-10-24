@@ -497,6 +497,13 @@ class MusicSender:
                     "singer": song.artists or "",
                 }
             )
+        elif isinstance(player, AppleMusic):
+            music_data.update(
+                {
+                    "url": song.audio_url or "",
+                    "content": song.artists or "",
+                }
+            )
         else:
             music_data = {"type": "163", "id": song.id}
 
