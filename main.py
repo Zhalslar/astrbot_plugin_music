@@ -73,16 +73,16 @@ class MusicPlugin(Star):
                 command = command.strip().lower()
                 if not command:
                     continue
-                self.trigger_routes[trigger.strip().lower()] = (
+                self.trigger_routes[command] = (
                     player,
                     source.strip() if separator and source.strip() else None,
                 )
-                self.keywords.append(trigger.strip().lower())
+                self.keywords.append(command)
         logger.debug(f"已注册触发词：{self.keywords}")
 
     @filter.command("点歌")
     async def search_song(self, event: AstrMessageEvent):
-        """使用默认音源搜索歌曲。"""
+        """点歌 <歌手歌名>, 也可用命令：网易点歌 NJ点歌 QQ点歌..."""
         # 此函数仅用于注册显示命令
         pass
 
@@ -98,7 +98,7 @@ class MusicPlugin(Star):
         route = self.trigger_routes.get(cmd.lower())
         player = route[0] if route else None
         source = route[1] if route else None
-        if cmd.lower() == "点歌":
+        if cmd.lower() == "点歌" and not route:
             player = self.get_player(default=True)
             source = None
         if not player:
