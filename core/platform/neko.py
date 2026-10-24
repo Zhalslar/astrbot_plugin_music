@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlparse
 
 import aiofiles
 import aiohttp
+
 from astrbot.api import logger
 
 from ..config import PluginConfig
@@ -93,7 +94,6 @@ class NekoMusic(BaseMusicPlayer):
                 params=requested,
                 headers=self._api_headers(),
                 proxy=proxy,
-                timeout=15,
             ) as response:
                 if response.status != 200:
                     raise RuntimeError(
@@ -141,7 +141,6 @@ class NekoMusic(BaseMusicPlayer):
                 params={**requested, "challenge": challenge, "proof": proof},
                 headers=self._api_headers(),
                 proxy=proxy,
-                timeout=15,
             ) as response:
                 if response.status == 409 and challenge_attempt == 0:
                     continue
@@ -170,7 +169,9 @@ class NekoMusic(BaseMusicPlayer):
             ):
                 raise RuntimeError("Neko API returned an invalid nonce batch")
 
-            expires_in = nonce_data.get("expiresIn")
+            expires_in = (
+                nonce_data.get("expiresIn") if isinstance(nonce_data, dict) else None
+            )
             self._nonce_expiry[nonce_type] = (
                 time.monotonic() + expires_in
                 if isinstance(expires_in, (int, float)) and expires_in > 0
@@ -207,7 +208,6 @@ class NekoMusic(BaseMusicPlayer):
                 f"{self.base_url}{endpoint}",
                 headers=request_headers,
                 proxy=proxy,
-                timeout=15,
                 **kwargs,
             ) as response:
                 if response.status == 409 and attempt == 0:
@@ -338,7 +338,6 @@ class NekoMusic(BaseMusicPlayer):
                 url,
                 headers=self._api_headers(),
                 proxy=self.platform_cfg.proxy or None,
-                timeout=15,
             ) as response:
                 if response.status != 200:
                     return None
@@ -366,7 +365,7 @@ class NekoMusic(BaseMusicPlayer):
                 url,
                 headers=self._api_headers(),
                 proxy=self.platform_cfg.proxy or None,
-                timeout=120,
+                timeout=120, # type: ignore
             ) as response:
                 if response.status != 200:
                     logger.warning(
