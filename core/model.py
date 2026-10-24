@@ -61,7 +61,6 @@ class Song:
         return "\n".join(lines)
 
 
-
 @dataclass(slots=True)
 class Platform:
     """平台信息"""
@@ -70,5 +69,3 @@ class Platform:
     """ 平台名称 """
     display_name: str
     """ 平台显示名称 """
-    keywords: list[str]
-    """ 平台关键词 """

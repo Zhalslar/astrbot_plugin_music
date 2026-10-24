@@ -39,36 +39,7 @@ class TXQQMusic(BaseMusicPlayer):
     platform: ClassVar[Platform] = Platform(
         name="txqq",
         display_name="TXQQ聚合平台",
-        keywords=[
-            "txqq",
-            "酷狗点歌",
-            "酷我点歌",
-            "百度点歌",
-            "一听点歌",
-            "咪咕点歌",
-            "荔枝点歌",
-            "蜻蜓点歌",
-            "喜马点歌",
-            "5sing原创",
-            "5sing翻唱",
-            "全民K歌",
-        ],
     )
-
-    PLATFORM_MAP = {
-        "qq": ["txqq"],
-        "kugou": ["酷狗"],
-        "kuwo": ["酷我"],
-        "baidu": ["百度"],
-        "1ting": ["一听"],
-        "migu": ["咪咕"],
-        "lizhi": ["荔枝"],
-        "qingting": ["蜻蜓"],
-        "ximalaya": ["喜马"],
-        "5singyc": ["5sing原创"],
-        "5singfc": ["5sing翻唱"],
-        "kg": ["全民"],
-    }
 
     BASE_URL = "https://music.txqq.pro/"
     HEADERS = {
@@ -85,20 +56,7 @@ class TXQQMusic(BaseMusicPlayer):
 
     def __init__(self, config: PluginConfig):
         super().__init__(config)
-        self.search_platform: str = "qq"
-
-    def _detect_platform(self, keyword: str) -> str:
-        """
-        从 keyword 中自动识别平台
-        返回 platform_type
-        """
-        raw = keyword.lower()
-
-        for ptype, keys in self.PLATFORM_MAP.items():
-            for k in keys:
-                if k.lower() in raw:
-                    return ptype
-        return self.search_platform
+        self.search_platform: str = self.platform_cfg.default_sub_source or "qq"
 
     async def fetch_songs(
         self,
@@ -109,7 +67,7 @@ class TXQQMusic(BaseMusicPlayer):
         """
         获取歌曲数据
         """
-        platform_type = self._detect_platform(extra) if extra else self.search_platform
+        platform_type = extra or self.search_platform
         result = await self._request(
             url=self.BASE_URL,
             method="POST",

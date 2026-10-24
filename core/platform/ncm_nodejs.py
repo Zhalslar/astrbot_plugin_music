@@ -15,15 +15,19 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
     platform: ClassVar[Platform] = Platform(
         name="netease_nodejs",
         display_name="网易云NodeJS版",
-        keywords=["nj点歌", "网易nj"],
     )
+    DEFAULT_BASE_URL = "https://zm.wwoyun.cn"
+    base_url: str
 
     def __init__(self, config: PluginConfig):
         super().__init__(config)
+        self.base_url = (self.platform_cfg.base_url or self.DEFAULT_BASE_URL).rstrip(
+            "/"
+        )
 
     async def fetch_songs(self, keyword: str, limit: int = 5, extra=None) -> list[Song]:
         result = await self._request(
-            url=f"{self.cfg.nodejs_base_url}/search",
+            url=f"{self.base_url}/search",
             method="POST",
             data={"keywords": keyword, "limit": limit, "type": 1, "offset": 0},
         )
@@ -51,7 +55,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
         if song.comments:
             return song
         result = await self._request(
-            url=f"{self.cfg.nodejs_base_url}/comment/hot",
+            url=f"{self.base_url}/comment/hot",
             method="POST",
             data={"id": song.id, "type": 0},
         )
@@ -65,7 +69,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
     async def fetch_lyrics(self, song: Song) -> Song:
         if song.lyrics:
             return song
-        result = await self._request(f"{self.cfg.nodejs_base_url}/lyric?id={song.id}")
+        result = await self._request(f"{self.base_url}/lyric?id={song.id}")
         if not isinstance(result, dict) or "lrc" not in result:
             logger.error(f"返回了意料之外数据：{result}")
             return song
@@ -77,7 +81,7 @@ class NetEaseMusicNodeJS(BaseMusicPlayer):
     async def fetch_extra(self, song: Song) -> Song:
         try:
             result = await self._request(
-                url=f"{self.cfg.nodejs_base_url}/song/url?id={song.id}",
+                url=f"{self.base_url}/song/url?id={song.id}",
                 method="GET",
             )
             if not isinstance(result, dict):

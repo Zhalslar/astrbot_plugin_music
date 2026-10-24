@@ -1,6 +1,7 @@
 # typed_config.py
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from types import MappingProxyType, UnionType
@@ -91,26 +92,100 @@ class ConfigNode:
         self._data.save_config()
 
 
-class PluginConfig(ConfigNode):
-    default_player_name: str
-    nodejs_base_url: str
+class ConfigNodeContainer:
+    """Wrap a template-list configuration as named platform nodes."""
+
+    def __init__(
+        self,
+        nodes: list[dict[str, Any]],
+        item_cls: type[ConfigNode],
+        key_name: str = "__template_key",
+    ):
+        self._nodes: dict[str, ConfigNode] = {}
+        for node in nodes:
+            key = node.get(key_name)
+            if not key:
+                logger.warning(f"[music] miss {key_name}, skip platform config")
+                continue
+            if key in self._nodes:
+                logger.warning(f"[music] duplicate platform config: {key}")
+            self._nodes[key] = item_cls(node)
+
+    def __getattr__(self, name: str) -> ConfigNode:
+        if name in self._nodes:
+            return self._nodes[name]
+        raise AttributeError(name)
+
+    def __iter__(self):
+        return iter(self._nodes.values())
+
+    def keys(self):
+        return self._nodes.keys()
+
+    def items(self):
+        return self._nodes.items()
+
+
+class MusicPlayerItem(ConfigNode):
+    """Configuration for one music source platform."""
+
+    __template_key: str
+    enable: bool
+    trigger_words: list[str]
+    default_sub_source: str | None
+    base_url: str | None
+    uin: str | None
+    cookies: str | None
+    proxy: str | None
+    enc_sec_key: str | None
+    enc_params: str | None
+
+    @property
+    def name(self) -> str:
+        return self._data.get("__template_key", "")
+
+
+class MusicPlayerConfig(ConfigNodeContainer):
+    """Typed collection of configured music source platforms."""
+
+    netease: MusicPlayerItem
+    netease_nodejs: MusicPlayerItem
+    qqmusic: MusicPlayerItem
+    txqq: MusicPlayerItem
+
+    def __init__(self, nodes: list[dict[str, Any]]):
+        super().__init__(nodes, item_cls=MusicPlayerItem)
+
+    def platforms(self) -> list[str]:
+        return list(self._nodes.keys())
+
+    def enabled_platforms(self) -> list[str]:
+        return [name for name, config in self._nodes.items() if config.enable]
+
+
+class SearchConfig(ConfigNode):
+    default_source: str
     song_limit: int
     select_modes: list[str]
     cards_per_row: int
+    timeout: int
+    recall_select: bool
+
+
+class SendConfig(ConfigNode):
     send_modes: list[str]
     ark_key: str
     record_unsupported: list[str]
     file_unsupported: list[str]
     enable_comments: bool
     enable_lyrics: bool
-    proxy: str
-    timeout: int
-    recall_select: bool
-    clear_cache: bool
-    enc_sec_key: str
-    enc_params: str
-    qqmusic_uin: str
-    qqmusic_cookie: str
+    return_play_song_result: bool
+
+
+class PluginConfig(ConfigNode):
+    search_config: SearchConfig
+    send_config: SendConfig
+    players_template: list[dict[str, Any]]
 
     _plugin_name: str = "astrbot_plugin_music"
 
@@ -118,21 +193,32 @@ class PluginConfig(ConfigNode):
         super().__init__(config)
         self.context = context
         self.plugin_dir = Path(get_astrbot_plugin_path()) / self._plugin_name
+        self.default_template_file = self.plugin_dir / "default_template.json"
         self.font_path = self.plugin_dir / "fonts" / "simhei.ttf"
-        self.temp_dir = Path(get_astrbot_temp_path()) / self._plugin_name
-        self.songs_dir = self.temp_dir / "songs"
-        self.songs_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir = Path(get_astrbot_temp_path())
 
-        self._select_modes = [m.split("(", 1)[0].strip() for m in self.select_modes]
-        self._send_modes = [m.split("(", 1)[0].strip() for m in self.send_modes]
+        self._select_modes = [
+            m.split("(", 1)[0].strip() for m in self.search_config.select_modes
+        ]
+        self._send_modes = [
+            m.split("(", 1)[0].strip() for m in self.send_config.send_modes
+        ]
+        if not self.players_template:
+            try:
+                with self.default_template_file.open(encoding="utf-8-sig") as file:
+                    self.players_template[:] = json.load(file)
+                self.save_config()
+            except Exception as exc:
+                logger.error(f"[music] failed to load platform template: {exc}")
+        self._players = MusicPlayerConfig(self.players_template)
+
+    @property
+    def players(self) -> MusicPlayerConfig:
+        return self._players
 
     @property
     def real_select_modes(self) -> list[str]:
         return self._select_modes
-
-    @property
-    def http_proxy(self) -> str | None:
-        return self.proxy or None
 
     @property
     def real_send_modes(self) -> list[str]:
@@ -143,5 +229,5 @@ class PluginConfig(ConfigNode):
         return (
             1
             if self._select_modes and self._select_modes[0] == "single"
-            else self.song_limit
+            else self.search_config.song_limit
         )
