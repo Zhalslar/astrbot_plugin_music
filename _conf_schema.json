@@ -13,14 +13,16 @@
                     "netease_nodejs",
                     "neko",
                     "qqmusic",
-                    "txqq"
+                    "txqq",
+                    "apple_music"
                 ],
                 "labels": [
                     "网易云音乐",
                     "网易云音乐 NodeJS",
                     "Neko 云音乐",
                     "QQ 音乐",
-                    "TXQQ 聚合音源"
+                    "TXQQ 聚合音源",
+                    "Apple Music"
                 ],
                 "default": "netease"
             },
@@ -370,6 +372,37 @@
                     "proxy": {
                         "description": "代理地址",
                         "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    }
+                }
+            },
+            "apple_music": {
+                "name": "Apple Music",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索。",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "Apple Music 试听音源的点歌触发词。",
+                        "type": "list",
+                        "default": [
+                            "苹果点歌"
+                        ]
+                    },
+                    "region": {
+                        "description": "首选商店地区",
+                        "hint": "iTunes 搜索地区代码；CN 无结果时会自动尝试 US、JP、HK、TW、GB、SG。",
+                        "type": "string",
+                        "default": "US"
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。",
                         "type": "string",
                         "default": ""
                     }
