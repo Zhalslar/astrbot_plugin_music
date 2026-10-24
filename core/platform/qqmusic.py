@@ -256,3 +256,68 @@ class QQMusicOfficial(BaseMusicPlayer):
                 )
             )
         return songs
+
+    async def fetch_extra(self, song: Song) -> Song:
+        """Resolve a QQ Music audio URL using the song's official song MID.
+
+        Args:
+            song: Song returned by the QQ Music search API.
+
+        Returns:
+            The song with an audio URL when QQ Music provides one.
+        """
+        if song.audio_url or not song.note:
+            return song
+
+        configured_uin = (self.platform_cfg.uin or "").strip()
+        if not configured_uin:
+            logger.warning("QQ Music UIN is not configured; cannot resolve audio")
+            return song
+        try:
+            uin = int(configured_uin)
+        except ValueError:
+            logger.warning("QQ Music UIN must be numeric; cannot resolve audio")
+            return song
+
+        cookie = self._get_cookie()
+        body = {
+            "comm": {
+                "uin": uin,
+                "format": "json",
+                "ct": 24,
+                "cv": 0,
+            },
+            "req_0": {
+                "module": "vkey.GetVkeyServer",
+                "method": "CgiGetVkey",
+                "param": {
+                    "filename": [f"M500{song.note}{song.note}.mp3"],
+                    "guid": "10000",
+                    "songmid": [song.note],
+                    "songtype": [0],
+                    "uin": configured_uin,
+                    "loginflag": 1,
+                    "platform": "20",
+                },
+            },
+        }
+        data = await self._post_musicu(body, cookie)
+        request_data = data.get("req_0") if data else None
+        response_data = (
+            request_data.get("data") if isinstance(request_data, dict) else None
+        )
+        if not isinstance(response_data, dict):
+            response_data = {}
+        servers = response_data.get("sip") or []
+        url_info = response_data.get("midurlinfo") or []
+        if (
+            servers
+            and isinstance(url_info, list)
+            and url_info
+            and isinstance(url_info[0], dict)
+            and url_info[0].get("purl")
+        ):
+            song.audio_url = servers[0] + url_info[0]["purl"]
+        else:
+            logger.warning(f"QQ Music did not return an audio URL for song {song.note}")
+        return song
