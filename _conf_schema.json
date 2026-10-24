@@ -11,12 +11,14 @@
                 "options": [
                     "netease",
                     "netease_nodejs",
+                    "neko",
                     "qqmusic",
                     "txqq"
                 ],
                 "labels": [
                     "网易云音乐",
                     "网易云音乐 NodeJS",
+                    "Neko 云音乐",
                     "QQ 音乐",
                     "TXQQ 聚合音源"
                 ],
@@ -220,6 +222,35 @@
                         "type": "text",
                         "invisible": true,
                         "default": ""
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    }
+                }
+            },
+            "neko": {
+                "name": "Neko 云音乐",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索。",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "输入该音源的点歌触发词，支持定义多个触发词。",
+                        "type": "list",
+                        "default": ["Neko点歌"]
+                    },
+                    "base_url": {
+                        "description": "API 根地址",
+                        "hint": "Neko 云音乐 API 根地址。",
+                        "type": "string",
+                        "default": "https://music.nekocore.cn"
                     },
                     "proxy": {
                         "description": "代理地址",
