@@ -65,8 +65,7 @@
     "__template_key": "apple_music",
     "enable": true,
     "trigger_words": [
-      "Apple点歌",
-      "AM点歌"
+      "苹果点歌"
     ],
     "region": "US",
     "proxy": ""
