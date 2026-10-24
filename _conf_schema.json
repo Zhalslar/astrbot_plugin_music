@@ -135,6 +135,12 @@
                 "hint": "歌曲发送成功后，尝试获取歌词并渲染为图片发送 （需要使用的音源平台支持提供歌词）",
                 "type": "bool",
                 "default": false
+            },
+            "return_play_song_result": {
+                "description": "返回点歌结果给LLM",
+                "hint": "开启后，当点歌发送成功且没有可用热评时，将歌曲结果返回给 LLM，触发 LLM 回复",
+                "type": "bool",
+                "default": true
             }
         }
     },

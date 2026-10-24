@@ -179,6 +179,7 @@ class SendConfig(ConfigNode):
     file_unsupported: list[str]
     enable_comments: bool
     enable_lyrics: bool
+    return_play_song_result: bool
 
 
 class PluginConfig(ConfigNode):

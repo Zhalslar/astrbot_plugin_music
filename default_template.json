@@ -2,7 +2,9 @@
   {
     "__template_key": "netease",
     "enable": true,
-    "trigger_words": ["网易点歌", "网易云点歌"],
+    "trigger_words": [
+      "网易点歌"
+    ],
     "cookies": "",
     "proxy": "",
     "enc_sec_key": "45c8bcb07e69c6b545d3045559bd300db897509b8720ee2b45a72bf2d3b216ddc77fb10daec4ca54b466f2da1ffac1e67e245fea9d842589dc402b92b262d3495b12165a721aed880bf09a0a99ff94c959d04e49085dc21c78bbbe8e3331827c0ef0035519e89f097511065643120cbc478f9c0af96400ba4649265781fc9079",
@@ -11,15 +13,19 @@
   {
     "__template_key": "netease_nodejs",
     "enable": true,
-    "trigger_words": ["网易NJ点歌", "网易云NJ点歌"],
-    "base_url": "https://163api.qijieya.cn",
+    "trigger_words": [
+      "NJ点歌"
+    ],
+    "base_url": "https://zm.wwoyun.cn",
     "cookies": "",
     "proxy": ""
   },
   {
     "__template_key": "qqmusic",
     "enable": true,
-    "trigger_words": ["QQ点歌", "QQ音乐点歌"],
+    "trigger_words": [
+      "QQ点歌"
+    ],
     "uin": "",
     "cookies": "",
     "proxy": ""

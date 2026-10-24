@@ -116,6 +116,7 @@ _🎵 高性能多平台点歌插件 🎵_
 | --------------- | ------------------ |
 | enable_comments | 发送后附加热评     |
 | enable_lyrics   | 发送歌词图片       |
+| return_play_song_result | 无可用热评时，是否将 `play_song_by_name` 的发送结果返回给 LLM |
 
 以上开关位于 `send_config`。
 

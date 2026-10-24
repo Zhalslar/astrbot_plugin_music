@@ -14,7 +14,7 @@ from .core.lyrics_renderer import LyricsRenderer
 from .core.platform import BaseMusicPlayer
 from .core.sender import MusicSender
 from .core.song_renderer import CardRenderer
-from .core.utils import parse_user_input
+from .core.utils import parse_user_input, pick_best_song
 
 
 class MusicPlugin(Star):
@@ -224,8 +224,20 @@ class MusicPlugin(Star):
             else self.get_player(default=True)
         )
         if not player:
-            return f"无可用播放器：{platform}" if platform else "无可用播放器"
-        songs = await player.fetch_songs(keyword=song_name, limit=1)
+            return f"无可用播放器 {platform}"
+        songs = await player.fetch_songs(
+            keyword=song_name, limit=self.cfg.search_config.song_limit
+        )
         if not songs:
             return "没找到相关歌曲"
-        await self.sender.send_song(event, player, songs[0])
+        selected_song = pick_best_song(song_name, songs)
+        if not selected_song:
+            return "没找到相关歌曲"
+        sent = await self.sender.send_song(event, player, selected_song)
+        if (
+            sent
+            and self.cfg.send_config.return_play_song_result
+            and not selected_song.comments
+        ):
+            author = selected_song.artists or selected_song.author or "未知歌手"
+            return f"已发送《{selected_song.name} - {author}》 "

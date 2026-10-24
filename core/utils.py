@@ -1,4 +1,7 @@
+import re
 from enum import IntEnum
+
+from .model import Song
 
 
 class SendMode(IntEnum):
@@ -31,6 +34,52 @@ MODE_MAP_CN: dict[str, SendMode] = {
     "file_local": SendMode.FILE_LOCAL,
     "text": SendMode.TEXT,
 }
+
+
+def pick_best_song(query: str, songs: list[Song]) -> Song | None:
+    """Select the candidate that best matches a song title and singer query.
+
+    Args:
+        query: User-provided song title and optional singer.
+        songs: Search results to rank.
+
+    Returns:
+        The best matching song, the first result when no match scores, or None
+        when the result list is empty.
+    """
+    if not songs:
+        return None
+
+    normalized_query = (
+        re.sub(r"[\s\-—_/、,，.。:：;；·|]+", " ", query.strip()).strip().lower()
+    )
+    if not normalized_query:
+        return songs[0]
+
+    tokens = [token for token in normalized_query.split(" ") if len(token) >= 2]
+
+    def score_song(song: Song) -> float:
+        name = (song.name or song.title or "").strip().lower()
+        singer = (song.artists or song.author or "").strip().lower()
+        singers = [part.strip() for part in singer.split("/") if part.strip()]
+        score = 0.0
+        if name and name in normalized_query:
+            score += 2.0
+        for token in tokens:
+            if name and token in name:
+                score += 1.5
+            if singer and token in singer:
+                score += 1.5
+        if (
+            name
+            and name in normalized_query
+            and any(singer_name in normalized_query for singer_name in singers)
+        ):
+            score += 3.0
+        return score
+
+    best_song = max(songs, key=score_song)
+    return best_song if score_song(best_song) > 0 else songs[0]
 
 
 def parse_user_input(arg: str) -> tuple[int, list[str] | None, str | None]:
