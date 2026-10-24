@@ -1,170 +1,343 @@
 {
-    "default_player_name": {
-        "description": "默认点歌平台",
-        "hint": "定义点歌命令默认使用的平台。所有平台都支持用命令实时调用：网易点歌、nj点歌、QQ点歌、酷狗点歌、酷我点歌、百度点歌、一听点歌、咪咕点歌、荔枝点歌、蜻蜓点歌、喜马拉雅、5sing原创、5sing翻唱、全民K歌",
-        "type": "string",
-        "options": [
-            "网易点歌",
-            "nj点歌",
-            "QQ点歌",
-            "txqq",
-            "酷狗点歌",
-            "酷我点歌",
-            "百度点歌",
-            "一听点歌",
-            "咪咕点歌",
-            "荔枝点歌",
-            "蜻蜓点歌",
-            "喜马拉雅",
-            "5sing原创",
-            "5sing翻唱",
-            "全民K歌"
-        ],
-        "default": "网易点歌"
+    "search_config": {
+        "description": "搜歌配置",
+        "hint": "配置默认音源、搜索结果数量以及候选歌曲的展示和等待方式。",
+        "type": "object",
+        "items": {
+            "default_source": {
+                "description": "默认音源",
+                "hint": "定义“点歌”命令默认使用的音源；仅可选择已配置并启用的音源。",
+                "type": "string",
+                "options": [
+                    "netease",
+                    "netease_nodejs",
+                    "qqmusic",
+                    "txqq"
+                ],
+                "labels": [
+                    "网易云音乐",
+                    "网易云音乐 NodeJS",
+                    "QQ 音乐",
+                    "TXQQ 聚合音源"
+                ],
+                "default": "netease"
+            },
+            "song_limit": {
+                "description": "搜索歌曲数量限制",
+                "hint": "每次搜索返回的候选歌曲数量；单曲模式时会自动只取 1 首。",
+                "type": "int",
+                "slider": {
+                    "min": 1,
+                    "max": 20,
+                    "step": 1
+                },
+                "default": 5
+            },
+            "select_modes": {
+                "description": "选择模式",
+                "hint": "按列表顺序尝试选歌展示模式；单曲模式需要放在第一位。",
+                "type": "list",
+                "options": [
+                    "button(按钮模式)",
+                    "image(图片模式)",
+                    "text(文本模式)",
+                    "single(单曲模式)"
+                ],
+                "default": [
+                    "button(按钮模式)",
+                    "text(文本模式)",
+                    "image(图片模式)"
+                ]
+            },
+            "cards_per_row": {
+                "description": "候选菜单的列数",
+                "hint": "图片模式下每行显示的歌曲数量。",
+                "type": "int",
+                "slider": {
+                    "min": 1,
+                    "max": 5,
+                    "step": 1
+                },
+                "default": 3
+            },
+            "timeout": {
+                "description": "选歌等待超时时长（秒）",
+                "hint": "用户收到文本或图片候选列表后，等待其回复序号的最长时间；按钮选择不受此项影响。",
+                "type": "int",
+                "slider": {
+                    "min": 30,
+                    "max": 300,
+                    "step": 10
+                },
+                "default": 30
+            },
+            "recall_select": {
+                "description": "点歌成功后撤回选歌消息",
+                "hint": "仅在歌曲发送成功后尝试撤回候选列表消息；是否支持取决于当前消息平台。",
+                "type": "bool",
+                "default": true
+            }
+        }
     },
-    "nodejs_base_url": {
-        "description": "nodejs服务的api根地址",
-        "hint": "此项配置决定nodejs服务api的根地址，命令 “nj点歌” 使用的是网易云nodejs服务",
-        "type": "string",
-        "default": "https://163api.qijieya.cn"
+    "send_config": {
+        "description": "发歌配置",
+        "hint": "配置歌曲的发送方式、平台限制，以及发送成功后的附加内容。",
+        "type": "object",
+        "items": {
+            "send_modes": {
+                "description": "发送模式",
+                "hint": "按列表顺序尝试发送方式，失败时自动尝试下一种。卡片和签名卡片目前仅支持 aiocqhttp。",
+                "type": "list",
+                "options": [
+                    "card(卡片模式)",
+                    "ark_card(签名卡片)",
+                    "record_link(语音链接)",
+                    "record_local(本地语音)",
+                    "file_link(文件链接)",
+                    "file_local(本地文件)",
+                    "text(文本模式)"
+                ],
+                "default": [
+                    "ark_card(签名卡片)",
+                    "record_local(本地语音)",
+                    "record_link(语音链接)",
+                    "file_local(本地文件)",
+                    "file_link(文件链接)",
+                    "text(文本模式)"
+                ]
+            },
+            "ark_key": {
+                "description": "签名卡片 API key",
+                "hint": "启用 签名卡片 发送方式时需填写。当前版本推荐使用的站点地址：https://apii.xianyuw.cn，注册后在用户中心复制API令牌填在此处",
+                "type": "string",
+                "default": ""
+            },
+            "record_unsupported": {
+                "description": "不支持发语音的消息平台",
+                "hint": "填写 AstrBot 消息平台名称（如 aiocqhttp），这些平台将跳过语音链接和本地语音方式。留空表示不额外跳过平台。",
+                "type": "list",
+                "default": []
+            },
+            "file_unsupported": {
+                "description": "不支持发文件的消息平台",
+                "hint": "填写 AstrBot 消息平台名称（如 aiocqhttp），这些平台将跳过文件链接和本地文件方式。留空表示不额外跳过平台。",
+                "type": "list",
+                "default": []
+            },
+            "enable_comments": {
+                "description": "发送热评",
+                "hint": "歌曲发送成功后，尝试获取并发送一条热门评论 （需要使用的音源平台支持提供热评）",
+                "type": "bool",
+                "default": true
+            },
+            "enable_lyrics": {
+                "description": "发送歌词图片",
+                "hint": "歌曲发送成功后，尝试获取歌词并渲染为图片发送 （需要使用的音源平台支持提供歌词）",
+                "type": "bool",
+                "default": false
+            }
+        }
     },
-    "song_limit": {
-        "description": "搜索歌曲数量限制",
-        "hint": "搜索歌曲数量限制",
-        "type": "int",
-        "slider": {
-            "min": 1,
-            "max": 20,
-            "step": 1
-        },
-        "default": 5
-    },
-    "select_modes": {
-        "description": "选择模式",
-        "hint": "此配置决定搜索歌曲展示方法的优先级，排在前面的模式优先，发送失败时自动尝试下一种模式。单曲模式需要放在第一位",
-        "type": "list",
-        "options": [
-            "button(按钮模式)",
-            "image(图片模式)",
-            "text(文本模式)",
-            "single(单曲模式)"
-        ],
-        "default": [
-            "button(按钮模式)",
-            "text(文本模式)",
-            "image(图片模式)"
-        ]
-    },
-    "cards_per_row": {
-        "description": "候选菜单的列数",
-        "type": "int",
-        "hint": "定义图片模式下，候选菜单以多少列显示",
-        "slider": {
-            "min": 1,
-            "max": 5,
-            "step": 1
-        },
-        "default": 3
-    },
-    "send_modes": {
-        "description": "发送模式",
-        "hint": "此配置决定发送歌曲方式的优先级, 排在前面的模式优先，发送失败时自动尝试下一种模式。 注意: 卡片模式仅 aiocqhttp 平台可用, 链接模式发送较快，本地模式会先下载再发送，文本模式将以链接形式发送",
-        "type": "list",
-        "options": [
-            "card(卡片模式)",
-            "ark_card(签名卡片)",
-            "record_link(语音链接)",
-            "record_local(本地语音)",
-            "file_link(文件链接)",
-            "file_local(本地文件)",
-            "text(文本模式)"
-        ],
-        "default": [
-            "ark_card(签名卡片)",
-            "record_local(本地语音)",
-            "record_link(语音链接)",
-            "file_local(本地文件)",
-            "file_link(文件链接)",
-            "text(文本模式)"
-        ]
-    },
-    "ark_key": {
-        "description": "签名卡片 API key",
-        "hint": "签名卡片服务的用户令牌。请自行填写，当前版本推荐使用的站点地址：https://apii.xianyuw.cn，注册后在用户中心复制API令牌填在此处",
-        "type": "string",
-        "default": ""
-    },
-    "record_unsupported": {
-        "description": "不支持发语音的消息平台",
-        "hint": "此配置定义哪些消息平台不支持发送语音消息，留空表示所有平台都允许尝试",
-        "type": "list",
-        "default": []
-    },
-    "file_unsupported": {
-        "description": "不支持发文件的消息平台",
-        "hint": "此配置定义哪些消息平台不支持发送文件消息，留空表示所有平台都允许尝试",
-        "type": "list",
-        "default": []
-    },
-    "enable_comments": {
-        "description": "是否启用评论",
-        "hint": "开启后在发送歌曲后附加一条评论",
-        "type": "bool",
-        "default": true
-    },
-    "enable_lyrics": {
-        "description": "是否启用歌词",
-        "hint": "开启后在发送歌曲后附加一张歌曲图片",
-        "type": "bool",
-        "default": false
-    },
-    "proxy": {
-        "description": "代理地址",
-        "hint": "如 http://127.0.0.1:7890，留空则直连。作用于网络请求时",
-        "type": "string",
-        "default": ""
-    },
-    "timeout": {
-        "description": "点歌操作的超时时长（秒）",
-        "hint": "点歌时用户在此时间内没有进行操作则自动取消点歌",
-        "type": "int",
-        "slider": {
-            "min": 30,
-            "max": 300,
-            "step": 10
-        },
-        "default": 30
-    },
-    "recall_select": {
-        "description": "撤回选歌消息",
-        "hint": "点歌成功后，撤回之前发送的选歌消息",
-        "type": "bool",
-        "default": true
-    },
-    "qqmusic_uin": {
-        "description": "QQ音乐绑定QQ号",
-        "hint": "使用QQ音乐时需填。绿钻绑定的QQ号（uin），用于绿钻直链解析鉴权",
-        "type": "string",
-        "default": ""
-    },
-    "qqmusic_cookie": {
-        "description": "QQ音乐绿钻Cookie",
-        "hint": "使用QQ音乐时需填。填入网页端QQ音乐Cookie",
-        "type": "text",
-        "default": ""
-    },
-    "enc_sec_key": {
-        "description": "网易云野生密钥",
-        "hint": "",
-        "type": "string",
-        "invisible": true,
-        "default": "45c8bcb07e69c6b545d3045559bd300db897509b8720ee2b45a72bf2d3b216ddc77fb10daec4ca54b466f2da1ffac1e67e245fea9d842589dc402b92b262d3495b12165a721aed880bf09a0a99ff94c959d04e49085dc21c78bbbe8e3331827c0ef0035519e89f097511065643120cbc478f9c0af96400ba4649265781fc9079"
-    },
-    "enc_params": {
-        "description": "网易云Params",
-        "hint": "",
-        "type": "string",
-        "invisible": true,
-        "default": "D33zyir4L/58v1qGPcIPjSee79KCzxBIBy507IYDB8EL7jEnp41aDIqpHBhowfQ6iT1Xoka8jD+0p44nRKNKUA0dv+n5RWPOO57dZLVrd+T1J/sNrTdzUhdHhoKRIgegVcXYjYu+CshdtCBe6WEJozBRlaHyLeJtGrABfMOEb4PqgI3h/uELC82S05NtewlbLZ3TOR/TIIhNV6hVTtqHDVHjkekrvEmJzT5pk1UY6r0="
+    "players_template": {
+        "description": "音乐音源",
+        "type": "template_list",
+        "hint": "每项对应一个音源。只有已添加且启用的音源会注册；添加新音源时请勿重复添加相同平台。",
+        "templates": {
+            "netease": {
+                "name": "网易云音乐",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "输入该音源的点歌触发词，支持定义多个触发词",
+                        "type": "list",
+                        "default": ["网易点歌"]
+                    },
+                    "cookies": {
+                        "description": "Cookies",
+                        "hint": "预留的登录态配置；当前网易云 Web API 实现暂不读取此字段。",
+                        "type": "text",
+                        "invisible": true,
+                        "default": ""
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    },
+                    "enc_sec_key": {
+                        "description": "网易云评论密钥",
+                        "hint": "内置评论接口参数，请保持默认值。",
+                        "type": "string",
+                        "invisible": true,
+                        "default": "45c8bcb07e69c6b545d3045559bd300db897509b8720ee2b45a72bf2d3b216ddc77fb10daec4ca54b466f2da1ffac1e67e245fea9d842589dc402b92b262d3495b12165a721aed880bf09a0a99ff94c959d04e49085dc21c78bbbe8e3331827c0ef0035519e89f097511065643120cbc478f9c0af96400ba4649265781fc9079"
+                    },
+                    "enc_params": {
+                        "description": "网易云评论参数",
+                        "hint": "内置评论接口参数，请保持默认值。",
+                        "type": "string",
+                        "invisible": true,
+                        "default": "D33zyir4L/58v1qGPcIPjSee79KCzxBIBy507IYDB8EL7jEnp41aDIqpHBhowfQ6iT1Xoka8jD+0p44nRKNKUA0dv+n5RWPOO57dZLVrd+T1J/sNrTdzUhdHhoKRIgegVcXYjYu+CshdtCBe6WEJozBRlaHyLeJtGrABfMOEb4PqgI3h/uELC82S05NtewlbLZ3TOR/TIIhNV6hVTtqHDVHjkekrvEmJzT5pk1UY6r0="
+                    }
+                }
+            },
+            "netease_nodejs": {
+                "name": "网易云音乐 NodeJS",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索。",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "输入该音源的点歌触发词，支持定义多个触发词",
+                        "type": "list",
+                        "default": ["NJ点歌"]
+                    },
+                    "base_url": {
+                        "description": "API 根地址",
+                        "hint": "网易云 NodeJS API 服务的根 URL",
+                        "type": "string",
+                        "default": "https://zm.wwoyun.cn"
+                    },
+                    "cookies": {
+                        "description": "Cookies",
+                        "hint": "预留的登录态配置；当前 NodeJS API 实现暂不读取此字段。",
+                        "type": "text",
+                        "invisible": true,
+                        "default": ""
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    }
+                }
+            },
+            "qqmusic": {
+                "name": "QQ 音乐",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索。",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "输入该音源的点歌触发词，支持定义多个触发词",
+                        "type": "list",
+                        "default": ["QQ点歌"]
+                    },
+                    "uin": {
+                        "description": "绑定 QQ 号（UIN）",
+                        "hint": "必填。填写 QQ 音乐绿钻绑定的 QQ 号，用于搜索接口鉴权；未填写时该音源不会返回搜索结果。",
+                        "type": "string",
+                        "default": ""
+                    },
+                    "cookies": {
+                        "description": "QQ 音乐 Cookies",
+                        "hint": "选填。可填写网页端 QQ 音乐 Cookie；仅包含有效 qqmusic_key 或 qm_keyst 的 Cookie 会被发送。",
+                        "type": "text",
+                        "default": ""
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    }
+                }
+            },
+            "txqq": {
+                "name": "TXQQ 聚合音源",
+                "items": {
+                    "enable": {
+                        "description": "启用此音源",
+                        "hint": "关闭后此音源不会参与命令匹配或搜索。",
+                        "type": "bool",
+                        "default": true
+                    },
+                    "trigger_words": {
+                        "description": "触发词",
+                        "hint": "聚合音源的每项触发词需填写“触发词:子音源标识”，例如“点歌:qq”“一听音乐:1ting”“咪咕音乐:migu”。",
+                        "type": "list",
+                        "default": [
+                            "点歌:qq",
+                            "网易云音乐:netease",
+                            "酷狗音乐:kugou",
+                            "酷我音乐:kuwo",
+                            "百度音乐:baidu",
+                            "一听音乐:1ting",
+                            "咪咕音乐:migu",
+                            "荔枝FM:lizhi",
+                            "蜻蜓FM:qingting",
+                            "喜马拉雅:ximalaya",
+                            "5sing原创:5singyc",
+                            "5sing翻唱:5singfc",
+                            "全民K歌:kg"
+                        ]
+                    },
+                    "default_sub_source": {
+                        "description": "默认子音源",
+                        "hint": "触发词没有显式指定子音源时使用的平台。",
+                        "type": "string",
+                        "options": [
+                            "netease",
+                            "qq",
+                            "kugou",
+                            "kuwo",
+                            "baidu",
+                            "1ting",
+                            "migu",
+                            "lizhi",
+                            "qingting",
+                            "ximalaya",
+                            "5singyc",
+                            "5singfc",
+                            "kg"
+                        ],
+                        "labels": [
+                            "网易云音乐",
+                            "QQ 音乐",
+                            "酷狗音乐",
+                            "酷我音乐",
+                            "百度音乐",
+                            "一听音乐",
+                            "咪咕音乐",
+                            "荔枝 FM",
+                            "蜻蜓 FM",
+                            "喜马拉雅",
+                            "5sing 原创",
+                            "5sing 翻唱",
+                            "全民 K 歌"
+                        ],
+                        "default": "netease"
+                    },
+                    "cookies": {
+                        "description": "Cookies",
+                        "hint": "预留的登录态配置；当前 TXQQ 聚合音源实现暂不读取此字段。",
+                        "type": "text",
+                        "invisible": true,
+                        "default": ""
+                    },
+                    "proxy": {
+                        "description": "代理地址",
+                        "hint": "此地址仅用于该音源的网络请求；留空表示直连。示例：http://127.0.0.1:7890。",
+                        "type": "string",
+                        "default": ""
+                    }
+                }
+            }
+        }
     }
 }

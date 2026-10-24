@@ -26,27 +26,27 @@ class ArkCard:
     REQUIRED_FIELDS = {"app", "meta", "prompt", "view"}
 
     def __init__(self, config: PluginConfig):
-        self.key = config.ark_key
+        self.key = config.send_config.ark_key
         self.session = aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(total=config.timeout),
-            proxy=config.http_proxy,
+            timeout=aiohttp.ClientTimeout(total=config.search_config.timeout)
         )
 
     async def close(self) -> None:
         await self.session.close()
 
-    async def _resolve_cover_url(self, cover_url: str) -> str:
+    async def _resolve_cover_url(self, cover_url: str, proxy: str | None) -> str:
         """Resolve a cover URL to its final HTTP redirect target.
 
         Args:
             cover_url: Original cover image URL.
+            proxy: Proxy URL for the current music source, if configured.
 
         Returns:
             The final redirected URL, or the original URL when resolution fails.
         """
         try:
             async with self.session.get(
-                cover_url, allow_redirects=True
+                cover_url, allow_redirects=True, proxy=proxy or None
             ) as cover_response:
                 cover_response.raise_for_status()
                 return str(cover_response.url)
@@ -73,6 +73,7 @@ class ArkCard:
         singer = song.artists or song.author or "Unknown artist"
 
         source = (song.source or player.platform.name).lower()
+        proxy = player.platform_cfg.proxy if player.platform_cfg else None
         card_format = self.FORMAT_MAP.get(source)
         if card_format is None:
             logger.warning(f"Ark card does not support music source: {source}")
@@ -80,7 +81,11 @@ class ArkCard:
 
         if not song.cover_url:
             song = await player.fetch_extra(song)
-        cover_url = await self._resolve_cover_url(song.cover_url) if song.cover_url else ""
+        cover_url = (
+            await self._resolve_cover_url(song.cover_url, proxy)
+            if song.cover_url
+            else ""
+        )
 
         params = {
             "key": self.key,
@@ -92,7 +97,9 @@ class ArkCard:
             "format": card_format,
         }
         try:
-            async with self.session.get(self.API_URL, params=params) as response:
+            async with self.session.get(
+                self.API_URL, params=params, proxy=proxy or None
+            ) as response:
                 response.raise_for_status()
                 result = await response.json(content_type=None)
         except (aiohttp.ClientError, TimeoutError, json.JSONDecodeError) as exc:

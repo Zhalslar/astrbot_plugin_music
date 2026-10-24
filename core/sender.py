@@ -2,6 +2,7 @@ import asyncio
 import base64
 import json
 import random
+import re
 import uuid
 from io import BytesIO
 from typing import Any
@@ -37,7 +38,6 @@ from astrbot.core.star.context import Context
 
 from .ark_card import ArkCard
 from .config import PluginConfig
-from .downloader import Downloader
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
 from .platform import BaseMusicPlayer, QQMusicOfficial, TXQQMusic
@@ -50,13 +50,11 @@ class MusicSender:
         config: PluginConfig,
         context: Context,
         lyrics_renderer: LyricsRenderer,
-        downloader: Downloader,
         song_renderer: CardRenderer,
     ):
         self.cfg = config
         self.context = context
         self.lyrics_renderer = lyrics_renderer
-        self.downloader = downloader
         self.song_renderer = song_renderer
         self.ark_card = ArkCard(config)
         self._selection_message_ids: dict[str, str | int] = {}
@@ -221,12 +219,21 @@ class MusicSender:
         return True
 
     async def _build_cover_map(
-        self, cover_urls: list[str]
+        self, player: BaseMusicPlayer, cover_urls: list[str]
     ) -> dict[str, PILImage.Image]:
+        """Download and decode candidate covers using their source adapter.
+
+        Args:
+            player: Adapter responsible for downloading the covers.
+            cover_urls: Cover image URLs to decode.
+
+        Returns:
+            Successfully decoded covers keyed by their original URL.
+        """
         cover_map: dict[str, PILImage.Image] = {}
         for cover_url in dict.fromkeys(cover_urls):
             try:
-                data = await self.downloader.download_image(cover_url, close_ssl=False)
+                data = await player.download_cover(cover_url)
                 if not data:
                     continue
                 image = PILImage.open(BytesIO(data)).convert("RGB")
@@ -394,7 +401,7 @@ class MusicSender:
             if song.cover_url:
                 cover_urls.append(song.cover_url)
 
-        cover_map = await self._build_cover_map(cover_urls)
+        cover_map = await self._build_cover_map(player, cover_urls) if player else {}
         image_bytes = await self.song_renderer.render_song_list_image(
             song_items, cover_map
         )
@@ -561,7 +568,7 @@ class MusicSender:
         if not song.audio_url:
             return False
 
-        file_path = await self.downloader.download_song(song.audio_url)
+        file_path = await player.download_audio(song.audio_url)
         if not file_path:
             logger.error(f"【{song.name}】下载失败")
             return False
@@ -594,7 +601,7 @@ class MusicSender:
         if not song.audio_url:
             return False
 
-        file_path = await self.downloader.download_song(song.audio_url)
+        file_path = await player.download_audio(song.audio_url)
         if not file_path:
             logger.error(f"【{song.name}】下载失败")
             return False
@@ -631,7 +638,9 @@ class MusicSender:
             # 没有评论
             return False
         try:
-            content = random.choice(song.comments).get("content")
+            content = re.sub(
+                r"\[[^\]]*]", "", random.choice(song.comments).get("content", "")
+            ).strip()
             await event.send(event.plain_result(content))
             return True
         except Exception:
@@ -677,9 +686,9 @@ class MusicSender:
             case "ark_card":
                 return platform == "aiocqhttp"
             case "record_link" | "record_local":
-                return platform not in self.cfg.record_unsupported
+                return platform not in self.cfg.send_config.record_unsupported
             case "file_link" | "file_local":
-                return platform not in self.cfg.file_unsupported
+                return platform not in self.cfg.send_config.file_unsupported
             case _:
                 return False
 
@@ -696,7 +705,12 @@ class MusicSender:
         if not song.audio_url or not song.cover_url:
             song = await player.fetch_extra(song)
 
-        if needs_audio and not song.audio_url and target_modes and target_modes[0] != "card":
+        if (
+            needs_audio
+            and not song.audio_url
+            and target_modes
+            and target_modes[0] != "card"
+        ):
             await event.send(event.plain_result(f"【{song.name}】音频获取失败"))
             return
 
@@ -735,11 +749,11 @@ class MusicSender:
             return
 
         self.clear_selection_context(event)
-        if self.cfg.recall_select:
+        if self.cfg.search_config.recall_select:
             await self._recall_selection_message(event)
 
-        if self.cfg.enable_comments:
+        if self.cfg.send_config.enable_comments:
             await self.send_comment(event, player, song)
 
-        if self.cfg.enable_lyrics:
+        if self.cfg.send_config.enable_lyrics:
             await self.send_lyrics(event, player, song)

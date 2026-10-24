@@ -15,7 +15,6 @@ class NetEaseMusic(BaseMusicPlayer):
     platform: ClassVar[Platform] = Platform(
         name="netease",
         display_name="网易云音乐",
-        keywords=["网易云", "网易点歌"],
     )
 
     def __init__(self, config: PluginConfig):

@@ -2,7 +2,11 @@ import asyncio
 import gzip
 import json
 import urllib.request
+import uuid
+from pathlib import Path
 from typing import Any, ClassVar
+
+import aiofiles
 
 from astrbot.api import logger
 
@@ -17,10 +21,17 @@ class QQMusicOfficial(BaseMusicPlayer):
     platform = Platform(
         name="qqmusic",
         display_name="QQ音乐",
-        keywords=["QQ点歌", "qq点歌", "qq音乐", "QQ音乐"],
     )
 
     API_URL = "https://u.y.qq.com/cgi-bin/musicu.fcg"
+    DOWNLOAD_HEADERS: ClassVar[dict[str, str]] = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/153.0.0.0 Safari/537.36 Edg/153.0.0.0"
+        ),
+        "Referer": "https://y.qq.com/",
+    }
     HEADERS: ClassVar[dict[str, str]] = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -61,11 +72,70 @@ class QQMusicOfficial(BaseMusicPlayer):
         )
 
     def _get_cookie(self) -> str:
-        cookie = (self.cfg.qqmusic_cookie or "").strip()
+        cookie = (self.platform_cfg.cookies or "").strip()
         values = self._cookie_values(cookie)
         if values.get("qqmusic_key") or values.get("qm_keyst"):
             return cookie
         return ""
+
+    async def download_cover(self, url: str) -> bytes | None:
+        """Download a QQ Music cover with urllib.
+
+        Args:
+            url: Cover image URL.
+
+        Returns:
+            Image bytes, or None if the request fails.
+        """
+        request = urllib.request.Request(url, headers=self.DOWNLOAD_HEADERS)
+        proxy = self.platform_cfg.proxy or None
+        proxy_handler = {"http": proxy, "https": proxy} if proxy else {}
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler(proxy_handler))
+        try:
+            response = await asyncio.to_thread(opener.open, request, timeout=20)
+            try:
+                if response.status != 200:
+                    logger.warning(f"QQ Music cover returned HTTP {response.status}")
+                    return None
+                return await asyncio.to_thread(response.read)
+            finally:
+                response.close()
+        except Exception as exc:
+            logger.warning(f"QQ Music cover download failed: {exc}")
+            return None
+
+    async def download_audio(self, url: str) -> Path | None:
+        """Download QQ Music audio with urllib.
+
+        Args:
+            url: Audio URL.
+
+        Returns:
+            Path to the downloaded file, or None if the request fails.
+        """
+        self.cfg.temp_dir.mkdir(parents=True, exist_ok=True)
+        file_path = self.cfg.temp_dir / f"{uuid.uuid4().hex}.mp3"
+        request = urllib.request.Request(url, headers=self.DOWNLOAD_HEADERS)
+        proxy = self.platform_cfg.proxy or None
+        proxy_handler = {"http": proxy, "https": proxy} if proxy else {}
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler(proxy_handler))
+        try:
+            response = await asyncio.to_thread(opener.open, request, timeout=30)
+            try:
+                if response.status != 200:
+                    logger.warning(f"QQ Music audio returned HTTP {response.status}")
+                    return None
+                async with aiofiles.open(file_path, "wb") as file:
+                    while chunk := await asyncio.to_thread(response.read, 64 * 1024):
+                        await file.write(chunk)
+            finally:
+                response.close()
+            logger.debug(f"QQ Music audio downloaded to: {file_path}")
+            return file_path
+        except Exception as exc:
+            file_path.unlink(missing_ok=True)
+            logger.error(f"QQ Music audio download failed: {exc}")
+            return None
 
     @staticmethod
     def _get_response_song_list(data: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -90,9 +160,12 @@ class QQMusicOfficial(BaseMusicPlayer):
             method="POST",
         )
         try:
-            response = await asyncio.to_thread(
-                urllib.request.urlopen, request, timeout=15
+            proxy = self.platform_cfg.proxy or None
+            proxy_handler = {"http": proxy, "https": proxy} if proxy else {}
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler(proxy_handler)
             )
+            response = await asyncio.to_thread(opener.open, request, timeout=15)
             try:
                 if response.status != 200:
                     logger.warning(f"QQ Music API returned HTTP {response.status}")
@@ -124,7 +197,7 @@ class QQMusicOfficial(BaseMusicPlayer):
         """
         del extra
         cookie = self._get_cookie()
-        configured_uin = (self.cfg.qqmusic_uin or "").strip()
+        configured_uin = (self.platform_cfg.uin or "").strip()
         if not configured_uin:
             logger.warning("QQ Music UIN is not configured")
             return []

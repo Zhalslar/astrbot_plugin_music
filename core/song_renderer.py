@@ -171,7 +171,7 @@ class CardRenderer:
         cards = await asyncio.gather(*tasks)
 
         rows: list[Image.Image] = []
-        per_row = self.cfg.cards_per_row
+        per_row = self.cfg.search_config.cards_per_row
         for i in range(0, len(cards), per_row):
             row_cards = cards[i : i + per_row]
             row_width = per_row * theme.card_width + (per_row + 1) * theme.margin

@@ -1,12 +1,15 @@
 import json
+import uuid
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import ClassVar
 
+import aiofiles
 import aiohttp
 
 from astrbot.api import logger
 
-from ..config import PluginConfig
+from ..config import MusicPlayerItem, PluginConfig
 from ..model import Platform, Song
 
 
@@ -23,6 +26,7 @@ class BaseMusicPlayer(ABC):
 
     platform: ClassVar[Platform]
     """ 平台信息（包含名称和显示名称） """
+    platform_cfg: MusicPlayerItem
 
     HEADERS = {
         "User-Agent": (
@@ -34,7 +38,9 @@ class BaseMusicPlayer(ABC):
 
     def __init__(self, config: PluginConfig):
         self.cfg = config
-        self.session = aiohttp.ClientSession(proxy=self.cfg.http_proxy)
+        self.platform_cfg = getattr(config.players, self.platform.name)
+        self.session: aiohttp.ClientSession | None = None
+        self._owns_session = False
 
     def __init_subclass__(cls, **kwargs):
         """自动注册子类到 _registry"""
@@ -78,6 +84,55 @@ class BaseMusicPlayer(ABC):
                 song.lyrics = data.get("lrc")
         return song
 
+    async def download_cover(self, url: str) -> bytes | None:
+        """Download a cover image using this platform's configured proxy.
+
+        Args:
+            url: Cover image URL.
+
+        Returns:
+            Image bytes, or None if the download fails.
+        """
+        try:
+            async with self._get_session().get(
+                url, proxy=self.platform_cfg.proxy or None
+            ) as response:
+                if response.status != 200:
+                    logger.warning(f"封面下载失败，HTTP 状态码：{response.status}")
+                    return None
+                return await response.read()
+        except Exception as e:
+            logger.warning(f"封面下载失败: {e}")
+            return None
+
+    async def download_audio(self, url: str) -> Path | None:
+        """Download audio to the shared temp directory.
+
+        Args:
+            url: Audio URL.
+
+        Returns:
+            Path to the downloaded file, or None if the download fails.
+        """
+        self.cfg.temp_dir.mkdir(parents=True, exist_ok=True)
+        file_path = self.cfg.temp_dir / f"{uuid.uuid4().hex}.mp3"
+        try:
+            async with self._get_session().get(
+                url, proxy=self.platform_cfg.proxy or None
+            ) as response:
+                if response.status != 200:
+                    logger.warning(f"歌曲下载失败，HTTP 状态码：{response.status}")
+                    return None
+                async with aiofiles.open(file_path, "wb") as file:
+                    async for chunk in response.content.iter_chunked(1024):
+                        await file.write(chunk)
+            logger.debug(f"歌曲下载完成，保存在：{file_path}")
+            return file_path
+        except Exception as e:
+            file_path.unlink(missing_ok=True)
+            logger.error(f"歌曲下载失败，错误信息：{e}")
+            return None
+
     async def fetch_comments(self, song: Song) -> Song:
         """
         默认获取热门评论的实现
@@ -90,8 +145,10 @@ class BaseMusicPlayer(ABC):
                 url=f"https://music.163.com/weapi/v1/resource/hotcomments/R_SO_4_{song.id}?csrf_token=",
                 method="POST",
                 data={
-                    "params": self.cfg.enc_params,
-                    "encSecKey": self.cfg.enc_sec_key,
+                    "params": self.platform_cfg.enc_params if self.platform_cfg else "",
+                    "encSecKey": self.platform_cfg.enc_sec_key
+                    if self.platform_cfg
+                    else "",
                 },
             )
         except Exception as e:
@@ -128,7 +185,11 @@ class BaseMusicPlayer(ABC):
             return song
 
         try:
-            async with self.session.get(lyrics, headers=self.HEADERS) as resp:
+            async with self._get_session().get(
+                lyrics,
+                headers=self.HEADERS,
+                proxy=self.platform_cfg.proxy or None,
+            ) as resp:
                 if resp.status != 200:
                     logger.warning(f"歌词 URL 请求返回 {resp.status}: {lyrics}")
                     return song
@@ -143,9 +204,20 @@ class BaseMusicPlayer(ABC):
         return song
 
     async def close(self):
-        """释放 session"""
-        if not self.session.closed:
+        """Close the default HTTP session if it was created."""
+        if self._owns_session and self.session and not self.session.closed:
             await self.session.close()
+
+    def _get_session(self) -> aiohttp.ClientSession:
+        """Create the default session on demand.
+
+        Returns:
+            The adapter's configured session or a lazily created default session.
+        """
+        if self.session is None:
+            self.session = aiohttp.ClientSession()
+            self._owns_session = True
+        return self.session
 
     # ---------- 内部 HTTP 方法 ----------
 
@@ -160,15 +232,22 @@ class BaseMusicPlayer(ABC):
         ssl: bool = True,
     ):
         headers = headers or self.HEADERS
+        proxy = self.platform_cfg.proxy or None
+        session = self._get_session()
 
         if method.upper() == "POST":
-            async with self.session.post(
-                url, data=data, headers=headers, cookies=cookies, ssl=ssl
+            async with session.post(
+                url,
+                data=data,
+                headers=headers,
+                cookies=cookies,
+                ssl=ssl,
+                proxy=proxy or None,
             ) as resp:
                 return await self._parse_response(resp)
 
-        async with self.session.get(
-            url, headers=headers, cookies=cookies, ssl=ssl
+        async with session.get(
+            url, headers=headers, cookies=cookies, ssl=ssl, proxy=proxy or None
         ) as resp:
             return await self._parse_response(resp)
 

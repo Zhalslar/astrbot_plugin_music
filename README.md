@@ -44,24 +44,27 @@ _🎵 高性能多平台点歌插件 🎵_
 
 请前往 **AstrBot 插件配置面板**进行设置。
 
-- 发送卡片需要填写配置项**签名卡片 API key**，当前版本使用的站点地址：[https://apii.xianyuw.cn](https://apii.xianyuw.cn) ，注册后在用户中心复制 API 令牌填写该项插件配置即可。
+- 发送卡片需要填写配置项**签名卡片 API key**，当前版本使用的站点地址：https://apii.xianyuw.cn，注册后在用户中心复制 API 令牌填写该项插件配置即可。
+- `players_template` 中可以分别启用音源并配置各自参数；新增音源时只需添加对应平台模板和播放器实现。
 
-### 🎼 默认点歌平台
+### 🎼 搜歌配置
 
-**default_player_name**
+以下配置位于 `search_config`：
 
-- 定义 `点歌` 命令默认使用的平台
-- 所有平台均可通过命令显式调用
+**default_source**
 
-支持平台（部分）：
+- 定义 `点歌` 命令默认使用的音源
+- 每个音源可在自己的 `trigger_words` 中配置触发词
+- 聚合音源的触发词使用 `触发词:子音源标识` 格式，例如 `一听音乐:1ting`
 
-- 网易点歌 / nj点歌（NodeJS）
-- QQ 点歌
-- 酷狗 / 酷我
-- 百度 / 咪咕
-- 荔枝 / 蜻蜓 / 喜马拉雅
-- 5sing 原创 / 翻唱
-- 全民 K 歌
+当前内置音源：
+
+- 网易云音乐 Web API（网易点歌）
+- 网易云音乐 NodeJS API（nj点歌）
+- QQ 音乐（QQ点歌）
+- TXQQ 聚合音源（网易云、QQ、酷狗、酷我、百度、一听、咪咕、荔枝、蜻蜓、喜马拉雅、5sing、全民 K 歌）
+
+每个音源都可单独启用、填写预留的 `cookies` 和代理地址。代理地址留空则直连；平台专属参数（如 NodeJS API 地址、QQ 音乐 UIN）也在 `players_template` 对应项中配置。未启用的音源不会被注册。
 
 ---
 
@@ -83,9 +86,13 @@ _🎵 高性能多平台点歌插件 🎵_
 
 按列表顺序逐个尝试，当前模式发送失败时自动使用下一种模式。
 
+**cards_per_row** 定义图片候选菜单每行的歌曲数量；**timeout** 定义等待用户选歌的超时时长；**recall_select** 控制点歌成功后是否撤回选歌消息。
+
 ---
 
-### 📤 发送策略（核心）
+### 📤 发歌配置
+
+以下配置位于 `send_config`。
 
 **send_modes**
 
@@ -109,9 +116,8 @@ _🎵 高性能多平台点歌插件 🎵_
 | --------------- | ------------------ |
 | enable_comments | 发送后附加热评     |
 | enable_lyrics   | 发送歌词图片       |
-| timeout         | 选歌等待超时（秒） |
-| clear_cache     | 重载插件时清空缓存 |
-| proxy           | 网络代理地址       |
+
+以上开关位于 `send_config`。
 
 ---
 
@@ -149,7 +155,7 @@ _🎵 高性能多平台点歌插件 🎵_
   如果你不想搭建服务器，又不能使用默认的服务，可以在互联网上搜索`allinurl:eapi_decrypt.html`来寻找公开项目的域名。下面贴一些搜集的公开url。
 
   ```text
-  https://163api.qijieya.cn
+  https://zm.wwoyun.cn
   https://zm.armoe.cn
   http://dg-t.cn:3000
   http://111.229.38.178:3333
@@ -159,7 +165,7 @@ _🎵 高性能多平台点歌插件 🎵_
   https://music-api.focalors.ltd
   ```
 
-  举例：插件的`nodejs_base_url`参数设置为`https://163api.qijieya.cn`，`enable_players`中将`网易云NodeJS版`打勾并调至第一位，即可完成配置。可以多尝试几个域名来寻找稳定音源。
+  举例：在 `players_template` 的 `netease_nodejs` 项中将 `base_url` 设置为 `https://zm.wwoyun.cn`，并启用该音源即可。可以多尝试几个域名来寻找稳定音源。
 - 部署自己的项目
 
   通过官网介绍部署项目，获得稳定音源。这里介绍docker compose快速部署。
@@ -191,7 +197,7 @@ _🎵 高性能多平台点歌插件 🎵_
 
   如果你开放了上面的调试端口，可以通过`{主机名}:3000`访问示例页面
 
-  将参数`enable_players`中将`网易云NodeJS版`打勾并调至第一位，即可完成配置。
+  在 `players_template` 的 `netease_nodejs` 项中填写服务地址并启用该音源，即可完成配置。
 
   这里的端口号3000可以修改成其他端口，具体见 Nodejs项目 文档。
 
