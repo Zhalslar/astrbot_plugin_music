@@ -40,7 +40,7 @@ from .ark_card import ArkCard
 from .config import PluginConfig
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
-from .platform import BaseMusicPlayer, QQMusicOfficial, TXQQMusic
+from .platform import AppleMusic, BaseMusicPlayer, QQMusicOfficial, TXQQMusic
 from .song_renderer import CardRenderer
 
 
@@ -495,6 +495,13 @@ class MusicSender:
                 {
                     "url": song.audio_url or "",
                     "singer": song.artists or "",
+                }
+            )
+        elif isinstance(player, AppleMusic):
+            music_data.update(
+                {
+                    "url": song.audio_url or "",
+                    "content": song.artists or "",
                 }
             )
         else:

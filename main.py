@@ -215,7 +215,7 @@ class MusicPlugin(Star):
 
         Args:
             song_name(string): 歌曲名称或包含歌手的关键词
-            platform(string): 音源标识或显示名称，例如 netease、netease_nodejs、neko、qqmusic、txqq。留空时使用默认音源。
+            platform(string): 音源标识或显示名称，例如 netease、netease_nodejs、neko、qqmusic、txqq、apple_music。留空时使用默认音源。
         """
 
         player = (

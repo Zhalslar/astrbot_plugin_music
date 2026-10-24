@@ -60,5 +60,15 @@
     "default_sub_source": "qq",
     "cookies": "",
     "proxy": ""
+  },
+  {
+    "__template_key": "apple_music",
+    "enable": true,
+    "trigger_words": [
+      "Apple点歌",
+      "AM点歌"
+    ],
+    "region": "US",
+    "proxy": ""
   }
 ]

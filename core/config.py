@@ -134,6 +134,7 @@ class MusicPlayerItem(ConfigNode):
     trigger_words: list[str]
     default_sub_source: str | None
     base_url: str | None
+    region: str | None
     uin: str | None
     cookies: str | None
     proxy: str | None
@@ -153,6 +154,7 @@ class MusicPlayerConfig(ConfigNodeContainer):
     neko: MusicPlayerItem
     qqmusic: MusicPlayerItem
     txqq: MusicPlayerItem
+    apple_music: MusicPlayerItem
 
     def __init__(self, nodes: list[dict[str, Any]]):
         super().__init__(nodes, item_cls=MusicPlayerItem)
