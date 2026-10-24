@@ -234,10 +234,8 @@ class MusicPlugin(Star):
         if not selected_song:
             return "没找到相关歌曲"
         sent = await self.sender.send_song(event, player, selected_song)
-        if (
-            sent
-            and self.cfg.send_config.return_play_song_result
-            and not selected_song.comments
-        ):
+        if not sent:
+            return f"《{selected_song.name}》发送失败"
+        if self.cfg.send_config.return_play_song_result:
             author = selected_song.artists or selected_song.author or "未知歌手"
             return f"已发送《{selected_song.name} - {author}》 "
