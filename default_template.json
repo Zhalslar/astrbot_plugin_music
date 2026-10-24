@@ -31,6 +31,15 @@
     "proxy": ""
   },
   {
+    "__template_key": "neko",
+    "enable": true,
+    "trigger_words": [
+      "Neko点歌"
+    ],
+    "base_url": "https://music.nekocore.cn",
+    "proxy": ""
+  },
+  {
     "__template_key": "txqq",
     "enable": true,
     "trigger_words": [

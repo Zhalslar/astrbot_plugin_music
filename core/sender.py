@@ -40,7 +40,7 @@ from .ark_card import ArkCard
 from .config import PluginConfig
 from .lyrics_renderer import LyricsRenderer
 from .model import Song
-from .platform import BaseMusicPlayer, QQMusicOfficial, TXQQMusic
+from .platform import BaseMusicPlayer, NekoMusic, QQMusicOfficial, TXQQMusic
 from .song_renderer import CardRenderer
 
 
@@ -473,7 +473,26 @@ class MusicSender:
         self, event: AiocqhttpMessageEvent, player: BaseMusicPlayer, song: Song
     ) -> bool:
         """发卡片"""
-        if isinstance(player, QQMusicOfficial):
+        if isinstance(player, NekoMusic):
+            if not song.audio_url:
+                song = await player.fetch_extra(song)
+
+            payloads: dict = {
+                "message": [
+                    {
+                        "type": "music",
+                        "data": {
+                            "type": "custom",
+                            "url": f"{player.base_url}/detail/{song.id}",
+                            "audio": song.audio_url or "",
+                            "title": song.name or "",
+                            "content": song.artists or "",
+                            "image": song.cover_url or "",
+                        },
+                    }
+                ]
+            }
+        elif isinstance(player, QQMusicOfficial):
             if not song.audio_url or not song.cover_url:
                 song = await player.fetch_extra(song)
 

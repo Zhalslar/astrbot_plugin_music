@@ -150,6 +150,7 @@ class MusicPlayerConfig(ConfigNodeContainer):
 
     netease: MusicPlayerItem
     netease_nodejs: MusicPlayerItem
+    neko: MusicPlayerItem
     qqmusic: MusicPlayerItem
     txqq: MusicPlayerItem
 
